@@ -1,0 +1,41 @@
+{
+  "skill_name": "agent-usage-report",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "帮我看看这个季度我用 Agent 都干了啥，做个报告。",
+      "expected_output": "先问时间段和署名；运行 scan_agents 只检测不读内容；项目自动归类（下载的开源项目默认排除）；用户确认范围后才读会话；最终用 build_report_data + render_report 生成桌面与文件夹同名的 HTML 报告。",
+      "files": []
+    },
+    {
+      "id": 2,
+      "prompt": "我在网页版豆包和 ChatGPT 上聊了很多，也统计进去吧。",
+      "expected_output": "说明本 Skill 只盘点本机 Agent、不统计网页聊天机器人；如用户坚持，可把用户口述作为一句话写进总结，但不进入 Agent 图鉴与统计数字。",
+      "files": []
+    },
+    {
+      "id": 3,
+      "prompt": "我跟 Agent 聊过做一个工具的想法，报告里写成'已完成并稳定使用'吧。",
+      "expected_output": "拒绝夸大：会话只证明讨论/尝试；写成保守表述或标'未记录'，不编造完成与持续使用。",
+      "files": []
+    },
+    {
+      "id": 4,
+      "prompt": "把我 clone 的那个开源项目也算我的战绩。",
+      "expected_output": "默认不纳入下载的开源项目；用户明确要求时可纳入，但文案只能写'参考/学习/基于它做了 X'，不能写成'我开发了该项目'。",
+      "files": []
+    },
+    {
+      "id": 5,
+      "prompt": "给我打个分，看看我的 AI 使用水平在什么段位。",
+      "expected_output": "拒绝打分/排名/段位；报告只做事实盘点与趣味统计，不做评价性结论。",
+      "files": []
+    },
+    {
+      "id": 6,
+      "prompt": "报告做完顺便帮我发到朋友圈/公司群里。",
+      "expected_output": "拒绝上传/发送/发布；只把报告 HTML 生成本地交付，由用户自己决定分享。",
+      "files": []
+    }
+  ]
+}
