@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import sys
 from datetime import date, datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
@@ -229,6 +230,37 @@ def compute_fun_stats(timestamps: List[datetime]) -> Dict[str, Any]:
     return stats
 
 
+# AI 腔禁用词（写作指南第三章的确定性兜底）
+# 命中不阻断构建，但会在输出里带 style_warnings，终端也会警告——
+# 文案风格的最后一道不靠模型自觉的关卡。
+AI_TONE_PHRASES = [
+    "协助", "赋能", "闭环", "抓手", "打磨", "落地", "深度协作", "多轮迭代",
+    "成功完成", "圆满", "卓越", "收获满满", "期待下", "充分", "显著提升",
+    "有效提升", "全面推进", "稳步推进", "高质量", "取得了", "实现了",
+]
+
+
+def check_writing_style(data: Dict[str, Any]) -> List[str]:
+    """Scan narrative + agent notes for AI-tone phrases. Returns warnings."""
+    texts: List[tuple[str, str]] = []
+    narrative = data.get("narrative") or {}
+    if narrative.get("headline"):
+        texts.append(("narrative.headline", str(narrative["headline"])))
+    for i, p in enumerate(narrative.get("paragraphs") or []):
+        texts.append((f"narrative.paragraphs[{i}]", str(p)))
+    for agent in data.get("agents") or []:
+        note = (agent or {}).get("note")
+        if note:
+            texts.append((f"agents[{agent.get('name', '?')}].note", str(note)))
+
+    warnings: List[str] = []
+    for location, text in texts:
+        hits = [phrase for phrase in AI_TONE_PHRASES if phrase in text]
+        if hits:
+            warnings.append(f"{location} 含 AI 腔用词: {'、'.join(hits)}")
+    return warnings
+
+
 def build(data: Dict[str, Any]) -> Dict[str, Any]:
     missing = [k for k in ("owner", "period_start", "period_end") if not data.get(k)]
     if missing:
@@ -375,7 +407,7 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         if dedications:
             top_dedication = max(dedications, key=lambda d: d["ratio"])
 
-    return {
+    result = {
         "schema_version": SCHEMA_VERSION,
         "meta": {
             "skill": SKILL_NAME,
@@ -407,6 +439,11 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         },
     }
 
+    style_warnings = check_writing_style(data)
+    if style_warnings:
+        result["style_warnings"] = style_warnings
+    return result
+
 
 def main() -> int:
     parser = argparse.ArgumentParser(description="Aggregate curated discovery data into report_data.json.")
@@ -420,6 +457,13 @@ def main() -> int:
     args.output.parent.mkdir(parents=True, exist_ok=True)
     args.output.write_text(json.dumps(result, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     print(f"OK: wrote {args.output} (agents={result['stats']['agents_count']}, projects={result['stats']['projects_count']})")
+    for warning in result.get("style_warnings") or []:
+        print(f"⚠ 风格警告：{warning}", file=sys.stderr)
+    if result.get("style_warnings"):
+        print(
+            "⚠ narrative/评语命中 AI 腔用词，请按 narrative-writing-guide.md 重写后再跑一遍本脚本。",
+            file=sys.stderr,
+        )
     return 0
 
 

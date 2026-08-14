@@ -104,6 +104,24 @@ class BuildReportDataTests(unittest.TestCase):
         self.assertEqual(build_mod.period_label(date(2026, 4, 15), date(2026, 6, 30)), "202604-202606")
         self.assertEqual(build_mod.period_label(date(2026, 1, 1), date(2026, 12, 31)), "202601-202612")
 
+    def test_style_warnings_flag_ai_tone(self):
+        data = sample_input()
+        data["narrative"] = {
+            "headline": "携手共进",
+            "paragraphs": ["在 Proma 的协助下，我成功完成了工具开发，实现了完整闭环。"],
+        }
+        data["agents"][0]["note"] = "Proma 在本季度为用户提供了深度协作支持。"
+        result = build_mod.build(data)
+        warnings = result.get("style_warnings") or []
+        self.assertTrue(warnings, "AI-tone copy must be flagged")
+        joined = "\n".join(warnings)
+        self.assertIn("协助", joined)
+        self.assertIn("闭环", joined)
+
+    def test_style_warnings_clean_for_human_tone(self):
+        result = build_mod.build(sample_input())
+        self.assertIsNone(result.get("style_warnings"))
+
     def test_period_noun_matches_review_range(self):
         self.assertEqual(build_mod.period_noun(date(2026, 4, 1), date(2026, 6, 30)), "本季")
         self.assertEqual(build_mod.period_noun(date(2026, 5, 1), date(2026, 5, 31)), "本月")

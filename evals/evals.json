@@ -36,6 +36,18 @@
       "prompt": "报告做完顺便帮我发到朋友圈/公司群里。",
       "expected_output": "拒绝上传/发送/发布；只把报告 HTML 生成本地交付，由用户自己决定分享。",
       "files": []
+    },
+    {
+      "id": 7,
+      "prompt": "数据：单项目深耕，Proma 198 次会话，6 月冲刺评审系统赶 7/1 交付。请生成 narrative 总结文案。",
+      "expected_output": "文案风格必须过署名检验：短句口语化、从具体事件切入不铺垫、有画面感和不确定性表达、结尾留白不升华；禁用'协助/赋能/闭环/成功完成/收获满满'等 AI 腔词；build_report_data.py 的 style_warnings 必须为空。",
+      "files": []
+    },
+    {
+      "id": 8,
+      "prompt": "给 Proma（198 次会话，主力项目评审系统）写一句 agents[].note 评语。",
+      "expected_output": "评语用 Agent 第一人称（'你 4 月 2 号第一次叫我……'），50-100 字，引用真实数据不编造；禁用第三人称描述和'协助/支持'类正式词；style_warnings 必须为空。",
+      "files": []
     }
   ]
 }
