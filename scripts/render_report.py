@@ -182,18 +182,42 @@ def render(data: Dict[str, Any]) -> str:
     parts.append("</div>")
 
     # ---- hidden achievements (fun stats) ----
+    # 两类 tag：计数类用宽松阈值（偶尔一次不算战绩）；记录类无阈值，是个人纪录就亮。
+    TH_NIGHT = 2        # 夜猫子：深夜会话 ≥2 次（一次是偶然，两次是习惯）
+    TH_EARLY = 2        # 早起鸟：清晨会话 ≥2 次
+    TH_WEEKEND = 1      # 周末加班：有就亮
+    TH_STREAK = 2       # 连续并肩：≥2 天（1 天不叫连续）
+    TH_BUSY_DAY = 3     # 单日爆发：单日 ≥3 次才不寒酸
+    TH_GAP = 7          # 神隐：≥7 天没会话才值得说
     fun_items = []
     if fun.get("session_count"):
-        if fun.get("night_sessions"):
+        if fun.get("night_sessions", 0) >= TH_NIGHT:
             fun_items.append(("hot", "🌙", f"夜猫子时刻 ×{fun['night_sessions']}", "23:00 后仍在和 Agent 并肩"))
-        if fun.get("weekend_sessions"):
+        if fun.get("weekend_sessions", 0) >= TH_WEEKEND:
             fun_items.append(("cool", "🏖️", f"周末加班（自愿的）×{fun['weekend_sessions']}", "周六日也有会话记录"))
-        if fun.get("early_sessions"):
+        if fun.get("early_sessions", 0) >= TH_EARLY:
             fun_items.append(("", "🌅", f"早起鸟 ×{fun['early_sessions']}", "早上 7 点前就开工"))
+        # 记录类：无阈值
         if fun.get("busiest_month"):
             fun_items.append(("", "🔥", f"火力全开月：{fun['busiest_month']}", "会话最多的一个月"))
-        if fun.get("longest_streak_days"):
+        if fun.get("longest_streak_days", 0) >= TH_STREAK:
             fun_items.append(("hot", "🔗", f"连续并肩 {fun['longest_streak_days']} 天", "每天都有 Agent 会话"))
+        if fun.get("busiest_day_count", 0) >= TH_BUSY_DAY:
+            day_label = fun["busiest_day"][5:].replace("-", "/")
+            fun_items.append(("hot", "⚡", f"单日爆发：{day_label} ×{fun['busiest_day_count']}", "一天之内的会话峰值"))
+        if (fun.get("period_months", 0) >= 2
+                and fun.get("active_months") == fun.get("period_months")):
+            fun_items.append(("cool", "📅", f"月度全勤 ×{fun['active_months']}", "周期里每个月都有会话"))
+        fav_count = fun.get("favorite_hour_count", 0)
+        if fav_count >= max(3, round(fun["session_count"] * 0.15)):
+            fun_items.append(("", "⏰", f"固定搭子：{fun['favorite_hour']} 点档 ×{fav_count}", "最常呼叫 Agent 的小时段"))
+        # 记录类：无阈值
+        if fun.get("latest_clock"):
+            fun_items.append(("", "🕯️", f"最晚收工 {fun['latest_clock']}", "跨夜算到凌晨也算当晚"))
+        if fun.get("earliest_clock") and int(fun["earliest_clock"][:2]) < 8:
+            fun_items.append(("", "🌤️", f"最早开工 {fun['earliest_clock']}", "别人还在睡"))
+        if fun.get("longest_gap_days", 0) >= TH_GAP:
+            fun_items.append(("", "🫥", f"神隐 {fun['longest_gap_days']} 天", "最长一次没找 Agent 的间隔"))
     if fun_items:
         parts.append("<div class=\"section\"><div class=\"sec-head\"><span class=\"no\">01</span><h2>隐藏战绩</h2><span class=\"hint\">HIDDEN ACHIEVEMENTS</span></div>")
         parts.append("<div class=\"funs\">")

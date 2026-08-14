@@ -179,6 +179,54 @@ class RenderReportTests(unittest.TestCase):
         self.assertNotIn("<b>总结</b>", html_text)
         self.assertIn("周报自动化", html_text)
 
+    def test_fun_stats_compute_record_fields(self):
+        result = build_mod.build(sample_input())
+        fun = result["fun_stats"]
+        self.assertEqual(fun["busiest_day"], "2026-04-12")
+        self.assertEqual(fun["busiest_day_count"], 1)
+        self.assertEqual(fun["favorite_hour_count"], 1)
+        self.assertEqual(fun["active_months"], 1)
+        self.assertEqual(fun["period_months"], 3)
+        self.assertEqual(fun["latest_clock"], "23:40")
+        self.assertEqual(fun["earliest_clock"], "09:10")
+        self.assertEqual(fun["longest_gap_days"], 3)  # 4/15-4/17 无会话
+
+    def test_fun_tags_loose_thresholds_and_records(self):
+        html = render_mod.render(build_mod.build(sample_input()))
+        # 记录类无阈值：直接呈现
+        self.assertIn("火力全开月：2026-04", html)
+        self.assertIn("最晚收工 23:40", html)
+        # 宽松阈值达标
+        self.assertIn("周末加班（自愿的）×2", html)
+        self.assertIn("连续并肩 3 天", html)
+        # 未达阈值：不呈现
+        self.assertNotIn("夜猫子", html)      # 仅 1 次 < 阈值 2
+        self.assertNotIn("单日爆发", html)    # 峰值 1 次 < 阈值 3
+        self.assertNotIn("神隐", html)        # 间隔 3 天 < 阈值 7
+        self.assertNotIn("最早开工", html)    # 09:10 不够早
+        self.assertNotIn("月度全勤", html)    # 只有 1 个月有会话
+        self.assertNotIn("固定搭子", html)
+
+    def test_fun_tags_all_present_when_data_rich(self):
+        report = build_mod.build(sample_input())
+        report["fun_stats"].update({
+            "session_count": 100,
+            "night_sessions": 5,
+            "early_sessions": 3,
+            "busiest_day": "2026-05-22",
+            "busiest_day_count": 12,
+            "favorite_hour": 21,
+            "favorite_hour_count": 30,
+            "active_months": 3,
+            "period_months": 3,
+            "earliest_clock": "06:12",
+            "longest_gap_days": 9,
+        })
+        html = render_mod.render(report)
+        for tag in ("夜猫子时刻 ×5", "早起鸟 ×3", "单日爆发：05/22 ×12", "月度全勤 ×3",
+                    "固定搭子：21 点档 ×30", "最早开工 06:12", "神隐 9 天"):
+            self.assertIn(tag, html)
+
     def test_render_contains_share_button_and_meta(self):
         report = build_mod.build(sample_input())
         html = render_mod.render(report)

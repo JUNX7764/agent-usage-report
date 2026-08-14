@@ -196,11 +196,18 @@ def compute_fun_stats(timestamps: List[datetime]) -> Dict[str, Any]:
         "earliest": None,
         "latest": None,
         "monthly_rhythm": {},
+        "busiest_day": None,
+        "busiest_day_count": 0,
+        "favorite_hour": None,
+        "favorite_hour_count": 0,
+        "active_months": 0,
     }
     if not timestamps:
         return stats
 
     month_counts: Dict[str, int] = {}
+    day_counts: Dict[date, int] = {}
+    hour_counts: Dict[int, int] = {}
     days: set = set()
     for ts in timestamps:
         if ts.hour >= 23 or ts.hour < 5:
@@ -211,14 +218,42 @@ def compute_fun_stats(timestamps: List[datetime]) -> Dict[str, Any]:
             stats["weekend_sessions"] += 1
         month_key = ts.strftime("%Y-%m")
         month_counts[month_key] = month_counts.get(month_key, 0) + 1
+        day_counts[ts.date()] = day_counts.get(ts.date(), 0) + 1
+        hour_counts[ts.hour] = hour_counts.get(ts.hour, 0) + 1
         days.add(ts.date())
 
     stats["busiest_month"] = max(month_counts.items(), key=lambda kv: kv[1])[0]
     stats["earliest"] = min(timestamps).isoformat()
     stats["latest"] = max(timestamps).isoformat()
-    
+
     # monthly_rhythm: 每月会话分布
     stats["monthly_rhythm"] = dict(sorted(month_counts.items()))
+    stats["active_months"] = len(month_counts)
+
+    top_day, top_day_count = max(day_counts.items(), key=lambda kv: kv[1])
+    stats["busiest_day"] = top_day.isoformat()
+    stats["busiest_day_count"] = top_day_count
+
+    top_hour, top_hour_count = max(hour_counts.items(), key=lambda kv: kv[1])
+    stats["favorite_hour"] = top_hour
+    stats["favorite_hour_count"] = top_hour_count
+
+    # 时刻记录：跨夜换算后比较（0-5 点视为当晚的延续）
+    def _clock_key(ts: datetime) -> tuple:
+        h = ts.hour + 24 if ts.hour < 6 else ts.hour
+        return (h, ts.minute)
+
+    latest_ts = max(timestamps, key=_clock_key)
+    earliest_ts = min(timestamps, key=lambda ts: (ts.hour, ts.minute))
+    stats["latest_clock"] = latest_ts.strftime("%H:%M")
+    stats["earliest_clock"] = earliest_ts.strftime("%H:%M")
+
+    # 最长神隐：相邻活跃日之间的最大间隔
+    ordered_days = sorted(days)
+    longest_gap = 0
+    for prev_day, next_day in zip(ordered_days, ordered_days[1:]):
+        longest_gap = max(longest_gap, (next_day - prev_day).days - 1)
+    stats["longest_gap_days"] = longest_gap
 
     streak = best = 0
     prev: Optional[date] = None
@@ -359,6 +394,8 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
     timeline.sort(key=lambda t: t["date"])
 
     fun = compute_fun_stats(timestamps)
+    # 复盘周期覆盖的自然月数（供「月度全勤」判定）
+    fun["period_months"] = (end.year - start.year) * 12 + end.month - start.month + 1
 
     # 计算新增统计字段
     # project_density: 单项目密度（会话数/活跃天数）
