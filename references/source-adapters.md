@@ -91,6 +91,31 @@ Refer to `references/agent-discovery.md` for the full agent detection matrix.
 4. Scan `.md` and `.json` files for conversation content.
 5. Check for `.codex` config in project directories.
 
+## OpenCode
+
+**Location**:
+- macOS / Linux: data `~/.local/share/opencode/` (XDG); config `~/.config/opencode/`; binary `~/.opencode/bin/`
+- Windows: `%USERPROFILE%\.local\share\opencode\` or `%LOCALAPPDATA%\opencode\`
+
+1. Recent versions store everything in SQLite: `~/.local/share/opencode/opencode.db`. Open read-only (Python: `sqlite3.connect(f"file:{path}?mode=ro", uri=True)`), `SELECT` only, never write or copy the file (it can be many GB).
+2. Useful metadata before content authorization: the `session` table rows carry the project `directory`, `title`, and creation/update timestamps — enough for per-project session counts, active date ranges, and timeline stats without reading any message content.
+3. Older versions keep JSON files under `storage/session/<projectID>/` + `storage/message/` in the same directory; scan by file mtime and read session JSON for titles only.
+4. Group sessions by their project `directory` field for project attribution; sessions under the home directory are general/chat usage, not project work.
+5. The user may be running OpenCode right now to execute this very skill — if the scan missed it, that's a red flag; ask the user which tool they are currently using.
+
+## DscAiWork (大搜车内部 Agent)
+
+**Location**:
+- macOS: `~/Library/Application Support/DscAiWork/`（主程序数据）+ `~/DscAiWork/project/`（用户工作区/产出文件）
+- Windows: `%APPDATA%\DscAiWork\` + `%USERPROFILE%\DscAiWork\project\`
+
+1. 主程序为 Electron 桌面应用，内嵌 OpenClaw 运行时。会话数据存于 SQLite：`lobsterai.sqlite`（`cowork_sessions`、`cowork_messages`、`subagent_runs`）、`openclaw/state/tasks/runs.sqlite`（`task_runs`）、`openclaw/state/memory/main.sqlite`（记忆/文件索引）。
+2. 只读 `SELECT` 查询，禁止写库；先 `.tables` 再 `SELECT ... LIMIT 5` 确认 schema，再按目标时间段渐进导出。
+3. 工作区 `~/DscAiWork/project/` 含实际产出文件（CSV/JSON/PNG 等），按文件清单核对，作为产物记录。
+4. `SKILLs/` 目录含 `dsc-*` 技能（如 dsc-cangjie-query、dsc-ocean-query、dsc-scrm-skill、dsc-yuque-skill），用于了解已使用的能力。
+5. `auth.json` / `yuque.json` 含访问令牌，属敏感信息：禁止读取、回显或复制凭据；只记录集成类型。
+
+**Important**: DscAiWork 集成钉钉/语雀等渠道。不要读取消息渠道内容或凭据；只记录集成类型与已使用的技能。会话文本只能证明讨论/尝试/执行，不单独证明完成、持续使用或外部采纳。
 
 ## Windsurf
 

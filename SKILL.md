@@ -1,6 +1,6 @@
 ---
 name: agent-usage-report
-version: 0.1.1
+version: 0.2.0
 description: 盘点本机 AI Agent 使用记录，生成"我用 Agent 干了啥"趣味战绩报告（单文件 HTML）。用户说"看看我用 Agent 干了啥""做个 AI 使用盘点""Agent 使用回顾""我的 AI 战绩""电脑里有哪些 AI 痕迹""生成我的 Agent 年度报告"时使用。只关注本机 Agent 工具（Proma、Claude Code、Cursor、Codex 等），不关注网页版聊天机器人；只读盘点、不复制证据、不要求补充材料、不做任何评价或评审；输出仅供个人回顾与娱乐分享。
 ---
 
@@ -64,11 +64,16 @@ python scripts\scan_agents.py -o <work>\agents_found.json
 - "发现 Cursor（53 个项目）"
 - "Claude Code 也在（12 次协作）"
 
-扫描完成后直接告知找到的 Agent 列表和基本情况，然后进入下一步。
+扫描完成后直接告知找到的 Agent 列表和基本情况，**并请用户顺手确认一句**："扫到的是这些——有没有漏掉你常用的？"特别是用户当前正在用来跑这个 Skill 的工具（比如正开着它的会话）不在扫描结果里时，必须主动指出并按 `references/source-adapters.md` 补充扫描，确认无误后再进入下一步。
+
+扫描 JSON 里有两个自检字段，必须消化：
+
+- `runtime_detected_but_no_data_dir`：工具在 PATH / 运行进程 / 环境变量里出现了，但没找到数据目录——**最高优先级警报**，说明 catalog 路径过时或用户装在别处。逐个向用户确认数据位置后补扫。
+- `unknown_data_dir_candidates`：启发式发现的疑似 Agent 数据目录（不在已知清单）。列出来让用户认领，认领的按 `references/source-adapters.md` 通用只读规则读取元数据。
 
 ### 2. 扫描项目目录，找 AI 参与过的项目
 
-对常见位置（`~/Documents`、`~/Desktop`、`~/Developer` 等）下的项目目录：
+**先从第 1 步发现的 Agent 会话元数据里挖项目路径**（Claude Code 的 `projects/` 目录名、OpenCode session 的 `directory` 字段、Codex/Cursor 会话里的 cwd 等），用它们反向定位项目根——这比猜目录可靠得多。然后再扫常见位置兜底：`~/Documents`、`~/Desktop`、`~/Developer`，以及常见的自定义代码目录（`~/IdeaProjects`、`~/WebstormProjects`、`~/PycharmProjects`、`~/code`、`~/projects`、`~/work`、`~/go/src`，中文用户还可能有 `~/工作`、`~/项目`、`~/软件` 等；Windows 对应 `%USERPROFILE%` 下的同名目录）。对找到的项目目录：
 
 1. 检查 AI 工具痕迹：`.claude/`、`.cursor/`、`AGENTS.md`、`CLAUDE.md`、`.cursorrules`、`.codex/`、`.opencode/`、`.hermes/`、`.windsurfrules`、`.clinerules`、`.kimi/`、`.pi/` 等（完整清单见 `references/agent-discovery.md`）。
 2. 检查项目路径是否出现在已发现 Agent 的会话元数据中。

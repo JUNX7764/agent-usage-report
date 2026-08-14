@@ -25,6 +25,7 @@ DEFAULT_EMOJI = {
     "Codex": "🧬",
     "Hermes": "🪽",
     "Antigravity": "🤖",
+    "DscAiWork": "🤖",
     "Qoder": "🧩",
     "WorkBuddy": "🐧",
     "Gemini CLI": "♊",

@@ -7,7 +7,8 @@
 
 ## 它能做什么
 
-- **自动发现本机 AI Agent**：扫描 Proma、Claude Code、Hermes、Cursor、Codex、Windsurf、Aider、Cline、Kimi Code、Gemini CLI 等 30+ 常见 Agent（macOS / Linux / Windows 跨平台）
+- **自动发现本机 AI Agent**：扫描 Proma、Claude Code、OpenCode、Hermes、Cursor、Codex、Windsurf、Aider、Cline、Kimi Code、Gemini CLI、Qwen Code、Zed、Warp 等 50+ 常见 Agent（macOS / Linux / Windows 跨平台）
+- **三层防漏扫**：路径目录之外，还检测 PATH / 运行进程 / 环境变量里的 Agent 信号（在跑但没扫到数据目录会显式报警），并启发式发现目录外的疑似 Agent 数据目录让用户认领——扫描结果永远让用户确认，不静默漏报
 - **识别你参与的项目**：自动区分「你做的」和「下载的开源项目」，后者默认排除
 - **盘点会话成果**：按主题聚类会话，关联到项目，标注里程碑与成就
 - **生成单文件 HTML 报告**：数据大字报、隐藏战绩（夜猫子时刻/周末加班/连续并肩天数）、AI 干员图鉴、成就墙、跨项目时间线
@@ -41,7 +42,7 @@ Agent 会按以下流程执行：
 
 ```bash
 # 运行测试
-python3 -m pytest tests/
+python3 -m unittest discover -s tests -p 'test_*.py'
 # 语法检查
 python3 -m py_compile scripts/*.py
 ```
@@ -69,6 +70,10 @@ references/
 tests/                                    # 单元测试
 evals/                                    # 评估用例
 ```
+
+## 贡献
+
+你的 Agent 没被扫到？某个路径在你平台上不对？欢迎提 issue 或 PR 带上真实数据路径——检测目录靠社区共同维护，厂商也会随版本改存储布局。
 
 ## 免责声明
 

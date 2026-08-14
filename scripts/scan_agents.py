@@ -16,6 +16,7 @@ import argparse
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
 from datetime import datetime, timezone
@@ -60,24 +61,28 @@ def _agent_paths() -> dict[str, list[Path]]:
     return {
         "Proma": [home / ".proma"],
         "Claude Code": [home / ".claude"],
+        "Claude Desktop": [appdata / "Claude"],
         "Hermes": [home / ".hermes"],
         "Cursor": [home / ".cursor", appdata / "Cursor"],
         "Codex": [home / "Documents" / "Codex", home / ".codex"],
-        "Windsurf": [home / ".windsurf", appdata / "Windsurf"],
+        "Windsurf": [home / ".windsurf", appdata / "Windsurf", home / ".codeium" / "windsurf"],
         "Aider": [home / ".aider", home / ".aider.chat.history.md"],
         "Cline": [
             appdata / "Code" / "User" / "globalStorage" / "saoudrizwan.claude-dev",
             home / ".cline",
             home / ".vscode" / "extensions" / "saoudrizwan.claude-dev-*",
+            home / ".cursor" / "extensions" / "saoudrizwan.claude-dev-*",
+            home / ".vscode-oss" / "extensions" / "saoudrizwan.claude-dev-*",
         ],
         "Continue": [
             home / ".continue",
             home / ".vscode" / "extensions" / "continue.continue-*",
+            home / ".cursor" / "extensions" / "continue.continue-*",
         ],
         "Ollama": [home / ".ollama"],
-        "LM Studio": [appdata / "LM Studio"],
+        "LM Studio": [appdata / "LM Studio", home / ".lmstudio"],
         # 国内 AI Agent
-        "WorkBuddy": [appdata / "WorkBuddy", local / "WorkBuddy"],
+        "WorkBuddy": [appdata / "WorkBuddy", local / "WorkBuddy", home / ".workbuddy"],
         "TRAE": [appdata / "TRAE"],
         "Qoder": [appdata / "Qoder", local / "Qoder"],
         "悟空": [
@@ -85,28 +90,41 @@ def _agent_paths() -> dict[str, list[Path]]:
             appdata / "DingTalk" / "Wukong",
         ],
         "千问办公": [appdata / "QianwenOffice"],
+        "DscAiWork": [appdata / "DscAiWork", home / "DscAiWork"],
         # Code completion tools
         "Tabnine": [appdata / "TabNine"],
         "Codeium": [appdata / "Codeium", local / "Codeium"],
-        "Supermaven": [home / ".vscode" / "extensions" / "supermaven*"],
-        "Amazon Q Developer": [home / ".aws"],
+        "Supermaven": [
+            home / ".vscode" / "extensions" / "supermaven*",
+            home / ".cursor" / "extensions" / "supermaven*",
+        ],
+        "Amazon Q Developer": [home / ".aws" / "amazonq", appdata / "amazon-q"],
         # 国内编程 Agent (新增 4 个)
-        "Kimi Code": [appdata / "Kimi Code"],
+        "Kimi Code": [appdata / "Kimi Code", home / ".kimi-code"],
         "Kimi Work": [appdata / "Kimi Work"],
         "CodeBuddy": [appdata / "CodeBuddy"],
         "OMP": [appdata / "OMP"],
         # 国外编程 Agent (新增 16 个)
         "Gemini CLI": [home / ".gemini"],
+        "Qwen Code": [home / ".qwen"],
         "Antigravity CLI": [home / ".antigravity", home / ".agy"],
-        "OpenCode": [appdata / "OpenCode"],
+        "OpenCode": [
+            home / ".local" / "share" / "opencode",  # XDG data dir (sessions / opencode.db)
+            home / ".opencode",  # binary + config dir
+            appdata / "OpenCode",
+            local / "opencode",
+        ],
         "Alma": [appdata / "Alma"],
         "Pi": [appdata / "Pi"],
         "Grok Build": [appdata / "Grok Build"],
-        "Copilot CLI": [home / ".github" / "copilot"],
+        "Copilot CLI": [home / ".copilot", home / ".github" / "copilot"],
+        "Zed": [appdata / "Zed", home / ".config" / "zed"],
+        "Warp": [appdata / "dev.warp.Warp-Stable"],
+        "Augment": [home / ".augment"],
         "OpenClaw": [appdata / "OpenClaw"],
         "Bub": [appdata / "Bub"],
         "Cradle": [appdata / "Cradle"],
-        "MiMo Code": [appdata / "MiMo Code"],
+        "MiMo Code": [appdata / "MiMo Code", home / ".local" / "share" / "mimocode"],
         "Craft Agent": [appdata / "Craft Agent"],
         "Droid": [appdata / "Droid"],
         "ZCode": [appdata / "ZCode"],
@@ -157,6 +175,7 @@ AI_PROJECT_CONFIG_PATTERNS = {
     ".qoderwork/",
     ".wukong/",
     ".qianwen/",
+    ".dscaiwork/",
     ".codeium/",
     ".bolt/",
     ".v0/",
@@ -584,65 +603,268 @@ def classify_project_attribution(
     }
 
 
+# Agents that are not conversational AI agents (model runners, note tools,
+# launchers, completion-only). They are still reported, but tagged so the
+# downstream report never counts them as "AI 干员".
+AGENT_CATEGORIES = {
+    "Ollama": "local-model",
+    "LM Studio": "local-model",
+    "OMLX": "local-model",
+    "Tabnine": "completion-tool",
+    "Codeium": "completion-tool",
+    "Supermaven": "completion-tool",
+    "Obsidian": "note-tool",
+    "Notion": "note-tool",
+    "Apple Notes": "note-tool",
+    "TiddlyWiki": "note-tool",
+    "Raycast": "launcher",
+}
+
+
+def _category(name: str) -> str:
+    return AGENT_CATEGORIES.get(name, "agent")
+
+
+def _top_readable(path: Path) -> bool:
+    """False when a directory exists but cannot be listed (macOS TCC / perms)."""
+    try:
+        with os.scandir(path) as it:
+            next(it, None)
+        return True
+    except OSError:
+        return False
+
+
+# ---------------------------------------------------------------------------
+# Runtime signals: catch agents the path catalog missed
+# ---------------------------------------------------------------------------
+
+# agent name -> known CLI binary / process-name tokens (lowercase)
+RUNTIME_TOKENS = {
+    "Proma": ["proma"],
+    "Claude Code": ["claude"],
+    "Hermes": ["hermes"],
+    "Cursor": ["cursor"],
+    "Codex": ["codex"],
+    "Windsurf": ["windsurf"],
+    "OpenCode": ["opencode"],
+    "Gemini CLI": ["gemini"],
+    "Qwen Code": ["qwen"],
+    "Aider": ["aider"],
+    "Copilot CLI": ["copilot"],
+    "Ollama": ["ollama"],
+    "LM Studio": ["lm-studio", "lm studio", "lms"],
+    "Warp": ["warp"],
+    "Zed": ["zed"],
+    "TRAE": ["trae"],
+    "Cherry Studio": ["cherrystudio", "cherry studio"],
+    "CodeBuddy": ["codebuddy"],
+    "Droid": ["droid"],
+}
+
+# Environment variables agents set inside their own sessions/terminals.
+ENV_MARKERS = {
+    "CLAUDECODE": "Claude Code",
+    "CLAUDE_CODE_ENTRYPOINT": "Claude Code",
+    "CURSOR_TRACE_ID": "Cursor",
+}
+
+
+def _detect_runtime_signals() -> dict:
+    """Detect agents via PATH, running processes, and env markers.
+
+    Heuristic and metadata-only. Catches agents whose data directories are
+    missing from the path catalog — the classic silent-miss failure (e.g. the
+    user is literally running this skill inside an agent we did not scan).
+    """
+    on_path: dict[str, list[str]] = {}
+    for agent, tokens in RUNTIME_TOKENS.items():
+        for token in tokens:
+            resolved = shutil.which(token)
+            if resolved:
+                on_path.setdefault(agent, []).append(resolved)
+
+    names: list[str] = []
+    try:
+        if sys.platform == "win32":
+            out = subprocess.run(
+                ["tasklist", "/FO", "CSV", "/NH"],
+                capture_output=True, text=True, timeout=10,
+            ).stdout
+            names = [
+                line.split('","')[0].strip('"').lower()
+                for line in out.splitlines() if line
+            ]
+        else:
+            out = subprocess.run(
+                ["ps", "-eo", "comm="], capture_output=True, text=True, timeout=10,
+            ).stdout
+            names = [
+                os.path.basename(line.strip()).lower()
+                for line in out.splitlines() if line.strip()
+            ]
+    except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+        names = []
+    running: dict[str, list[str]] = {}
+    for proc in sorted(set(names)):
+        for agent, tokens in RUNTIME_TOKENS.items():
+            if any(token in proc for token in tokens):
+                running.setdefault(agent, []).append(proc)
+
+    env_hits: dict[str, list[str]] = {}
+    for var, agent in ENV_MARKERS.items():
+        if os.environ.get(var):
+            env_hits.setdefault(agent, []).append(var)
+    if os.environ.get("TERM_PROGRAM") == "WarpTerminal":
+        env_hits.setdefault("Warp", []).append("TERM_PROGRAM")
+
+    detected = sorted(set(on_path) | set(running) | set(env_hits))
+    return {
+        "on_path": {k: sorted(set(v)) for k, v in sorted(on_path.items())},
+        "running_processes": {k: sorted(set(v)) for k, v in sorted(running.items())},
+        "env_markers": {k: sorted(set(v)) for k, v in sorted(env_hits.items())},
+        "agents_detected_at_runtime": detected,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Heuristic discovery of unknown agent data directories
+# ---------------------------------------------------------------------------
+
+SESSION_DIR_MARKERS = {
+    "session", "sessions", "history", "conversations", "chats", "storage",
+}
+SESSION_FILE_SUFFIXES = {".jsonl", ".db", ".sqlite", ".sqlite3"}
+MAX_UNKNOWN_CANDIDATES = 30
+
+
+def _looks_like_agent_data(path: Path) -> list[str]:
+    """Return marker descriptions if a directory smells like agent session data.
+
+    Metadata only: names and types, never content.
+    """
+    markers: list[str] = []
+    try:
+        with os.scandir(path) as it:
+            entries = list(it)[:200]
+    except OSError:
+        return markers
+    for e in entries:
+        name = e.name.lower()
+        if e.is_dir(follow_symlinks=False) and name in SESSION_DIR_MARKERS:
+            markers.append(f"dir:{e.name}")
+        elif e.is_file(follow_symlinks=False) and (
+            Path(name).suffix in SESSION_FILE_SUFFIXES or name.startswith("history")
+        ):
+            markers.append(f"file:{e.name}")
+        if len(markers) >= 3:
+            break
+    return markers
+
+
+def _discover_unknown_candidates(known_paths: set[str]) -> list[dict]:
+    """Scan common config roots for agent-looking dirs missing from the catalog."""
+    home = _home()
+    roots = [home, home / ".config", home / ".local" / "share", _appdata()]
+    candidates: list[dict] = []
+    seen: set[str] = set()
+    for root in roots:
+        try:
+            with os.scandir(root) as it:
+                entries = list(it)[:500]
+        except OSError:
+            continue
+        for e in entries:
+            if len(candidates) >= MAX_UNKNOWN_CANDIDATES:
+                return candidates
+            if not e.is_dir(follow_symlinks=False):
+                continue
+            # at home level only dotdirs are plausible agent data locations
+            if root == home and not e.name.startswith("."):
+                continue
+            spath = str(Path(e.path))
+            if spath in known_paths or spath in seen:
+                continue
+            markers = _looks_like_agent_data(Path(e.path))
+            if len(markers) >= 2:
+                seen.add(spath)
+                candidates.append({"path": spath, "markers": markers})
+    return candidates
+
+
 def scan() -> dict:
     platform = _platform_label()
-    agents_found = []
-    agents_not_found = []
+    found_by_name: dict[str, dict] = {}
+
+    def _add(name: str, path: Path) -> None:
+        entry = found_by_name.setdefault(name, {
+            "name": name,
+            "category": _category(name),
+            "paths": [],
+            "file_count": 0,
+            "size_bytes": 0,
+            "notes": [],
+        })
+        spath = str(path)
+        if spath in entry["paths"]:
+            return  # macOS: appdata == local, avoid duplicate candidates
+        entry["paths"].append(spath)
+        if path.is_dir() and not _top_readable(path):
+            entry["notes"].append(f"exists_but_unreadable: {path}")
+            return
+        file_count, total_size = _count_files(path)
+        entry["file_count"] += file_count
+        entry["size_bytes"] += total_size
+        if file_count >= MAX_FILES_TO_COUNT:
+            entry["notes"].append("file_count_capped")
 
     for name, candidates in _agent_paths().items():
-        found = False
         for path in candidates:
-            # Handle glob-style entries (e.g. OMLX*)
+            # Handle glob-style entries (e.g. saoudrizwan.claude-dev-*)
             if path.name.endswith("*"):
-                real_parent = path.parent
-                prefix = path.name[:-1]
-                for match in _glob_dirs(real_parent, prefix):
-                    file_count, total_size = _count_files(match)
-                    agents_found.append({
-                        "name": name,
-                        "path": str(match),
-                        "file_count": file_count,
-                        "size_bytes": total_size,
-                        "note": "file_count_capped" if file_count >= MAX_FILES_TO_COUNT else None,
-                    })
-                    found = True
+                for match in _glob_dirs(path.parent, path.name[:-1]):
+                    _add(name, match)
                 continue
-
             if path.exists():
-                file_count, total_size = _count_files(path)
-                agents_found.append({
-                    "name": name,
-                    "path": str(path),
-                    "file_count": file_count,
-                    "size_bytes": total_size,
-                    "note": "file_count_capped" if file_count >= MAX_FILES_TO_COUNT else None,
-                })
-                found = True
-
-        if not found:
-            agents_not_found.append(name)
+                _add(name, path)
 
     # Also check for OMLX with glob pattern
-    omlx_prefix = "OMLX"
     for search_dir in [_appdata(), _local_appdata()]:
-        for match in _glob_dirs(search_dir, omlx_prefix):
-            if "OMLX" not in [a["name"] for a in agents_found]:
-                file_count, total_size = _count_files(match)
-                agents_found.append({
-                    "name": "OMLX",
-                    "path": str(match),
-                    "file_count": file_count,
-                    "size_bytes": total_size,
-                })
+        for match in _glob_dirs(search_dir, "OMLX"):
+            if "OMLX" not in found_by_name:
+                _add("OMLX", match)
+
+    agents_found = list(found_by_name.values())
+    for entry in agents_found:
+        if entry["notes"]:
+            entry["notes"] = sorted(set(entry["notes"]))
+        else:
+            entry.pop("notes")
+    agents_not_found = [n for n in _agent_paths() if n not in found_by_name]
+
+    runtime = _detect_runtime_signals()
+    runtime_missing = [
+        n for n in runtime["agents_detected_at_runtime"] if n not in found_by_name
+    ]
+    known_paths = {
+        str(p)
+        for candidates in _agent_paths().values()
+        for p in candidates
+        if not p.name.endswith("*")
+    }
+    unknown_candidates = _discover_unknown_candidates(known_paths)
 
     return {
-        "schema_version": "1.0",
+        "schema_version": "1.1",
         "platform": platform,
         "scanned_at": datetime.now(timezone.utc).isoformat(),
         "home_directory": str(_home()),
         "agents_found": agents_found,
-        "agents_not_found": [n for n in agents_not_found if n != "OMLX"],
-        "note": "File counts and sizes are approximate. Content is not read in this phase.",
+        "agents_not_found": agents_not_found,
+        "runtime_signals": runtime,
+        "runtime_detected_but_no_data_dir": runtime_missing,
+        "unknown_data_dir_candidates": unknown_candidates,
+        "note": "File counts and sizes are approximate; entries are aggregated by agent name (multiple candidate paths merged into 'paths'). category != 'agent' means local-model/completion/note/launcher tool, not a conversational agent. 'runtime_detected_but_no_data_dir' lists agents seen on PATH / in processes / in env vars whose data dir was not found — always confirm those with the user. 'unknown_data_dir_candidates' are heuristic guesses for the user to claim. Content is not read in this phase.",
     }
 
 
@@ -668,7 +890,23 @@ def main() -> int:
                 comment = "用得不少"
             else:
                 comment = "也有记录"
-            print(f"找到 {agent['name']}（{file_count} 个文件）... {comment}。")
+            category = agent.get("category", "agent")
+            suffix = "" if category == "agent" else f"（{category}，不算对话干员）"
+            notes = agent.get("notes") or []
+            warn = f" ⚠ {'; '.join(notes)}" if notes else ""
+            print(f"找到 {agent['name']}（{file_count} 个文件）{suffix}... {comment}。{warn}")
+        missing = result.get("runtime_detected_but_no_data_dir") or []
+        if missing:
+            print(
+                "⚠ 这些 Agent 在 PATH/进程/环境变量里出现了，但没扫到数据目录："
+                + ", ".join(missing)
+                + " —— 请向用户确认数据位置后补扫。"
+            )
+        unknown = result.get("unknown_data_dir_candidates") or []
+        if unknown:
+            preview = "; ".join(c["path"] for c in unknown[:5])
+            more = f" 等 {len(unknown)} 个" if len(unknown) > 5 else ""
+            print(f"发现疑似 Agent 数据目录（不在已知清单，请让用户认领）：{preview}{more}")
         if result["agents_not_found"]:
             print(f"没找到: {', '.join(result['agents_not_found'])}")
     else:
