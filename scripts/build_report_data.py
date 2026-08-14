@@ -23,6 +23,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import re
 import sys
 from datetime import date, datetime
 from pathlib import Path
@@ -30,7 +31,22 @@ from typing import Any, Dict, List, Optional
 
 SCHEMA_VERSION = "1.0"
 SKILL_NAME = "agent-usage-report"
-SKILL_VERSION = "0.1.1"
+SKILL_VERSION_FALLBACK = "0.2.5"  # 仅在 SKILL.md 读取失败时兜底
+
+
+def skill_version() -> str:
+    """Single source of truth: the version field in SKILL.md frontmatter."""
+    try:
+        head = (Path(__file__).resolve().parent.parent / "SKILL.md").read_text(
+            encoding="utf-8"
+        ).splitlines()[:20]
+    except OSError:
+        return SKILL_VERSION_FALLBACK
+    for line in head:
+        m = re.match(r'^version:\s*"?([0-9][\w.\-]*)"?\s*$', line.strip())
+        if m:
+            return m.group(1)
+    return SKILL_VERSION_FALLBACK
 
 
 # Icon mapping removed - using default emoji in render_report.py
@@ -448,7 +464,7 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         "schema_version": SCHEMA_VERSION,
         "meta": {
             "skill": SKILL_NAME,
-            "skill_version": SKILL_VERSION,
+            "skill_version": skill_version(),
             "owner": str(data["owner"]),
             "period_start": start.isoformat(),
             "period_end": end.isoformat(),

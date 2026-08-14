@@ -179,6 +179,17 @@ class RenderReportTests(unittest.TestCase):
         self.assertNotIn("<b>总结</b>", html_text)
         self.assertIn("周报自动化", html_text)
 
+    def test_skill_version_follows_skill_md_frontmatter(self):
+        head = (ROOT / "SKILL.md").read_text(encoding="utf-8").splitlines()[:20]
+        expected = next(
+            line.split(":", 1)[1].strip().strip('"')
+            for line in head if line.strip().startswith("version:")
+        )
+        self.assertEqual(build_mod.skill_version(), expected)
+        result = build_mod.build(sample_input())
+        self.assertEqual(result["meta"]["skill_version"], expected)
+        self.assertNotEqual(expected, "0.1.1")
+
     def test_fun_stats_compute_record_fields(self):
         result = build_mod.build(sample_input())
         fun = result["fun_stats"]
