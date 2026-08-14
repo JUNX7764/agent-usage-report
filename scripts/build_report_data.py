@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional
 
 SCHEMA_VERSION = "1.0"
 SKILL_NAME = "agent-usage-report"
-SKILL_VERSION_FALLBACK = "0.2.5"  # 仅在 SKILL.md 读取失败时兜底
+SKILL_VERSION_FALLBACK = "0.2.7"  # 仅在 SKILL.md 读取失败时兜底
 
 
 def skill_version() -> str:
@@ -291,6 +291,60 @@ AI_TONE_PHRASES = [
 ]
 
 
+_NOUN_SPEECH = {"本月": "这个月", "本季": "这个季度", "今年": "今年", "这段时间": "这段时间"}
+
+
+def build_share_text(stats: Dict[str, Any], fun: Dict[str, Any], noun: str, label: str) -> str:
+    """确定性兜底的分享文案（100-150 字）。优先由 Agent 在 narrative.share_text 代写，
+    缺失时才用这里按数据特征选骨架：深夜型 / 冲刺型 / 日常型。"""
+    sessions = stats.get("sessions_total") or 0
+    agents = stats.get("agents_count") or 0
+    projects = stats.get("projects_count") or 0
+    top = stats.get("top_agent") or "AI"
+    ts_count = fun.get("session_count") or 0
+    night = fun.get("night_sessions") or 0
+    weekend = fun.get("weekend_sessions") or 0
+    streak = fun.get("longest_streak_days") or 0
+    busiest_day_count = fun.get("busiest_day_count") or 0
+    latest_clock = str(fun.get("latest_clock") or "")
+    spoken_noun = _NOUN_SPEECH.get(noun, "这段时间")
+
+    night_heavy = ts_count > 0 and night / ts_count > 0.2
+    sprint = streak >= 14 or (ts_count > 0 and busiest_day_count >= max(10, ts_count * 0.12))
+
+    if night_heavy:
+        detail = f"{night} 次是半夜聊的"
+        if latest_clock:
+            clock = latest_clock[1:] if latest_clock.startswith("0") else latest_clock
+            hour = int(latest_clock.split(":")[0])
+            prefix = "凌晨 " if hour < 6 else ("晚上 " if hour >= 18 else "")
+            detail += f"，最晚一回耗到{prefix}{clock}"
+        if streak >= 3:
+            detail += f"，最长连续 {streak} 天没断过"
+        return (
+            f"刚翻了自己{label}的 AI 使用记录，有点不好意思：{sessions} 次会话，"
+            f"{agents} 个 AI 干员轮着叫，推进了 {projects} 个项目。{detail}。"
+            f"说是工具，其实更像搭子——{top} 被我使唤得最狠。"
+            f"{spoken_noun}我没怎么卷，是 AI 在替我卷。"
+        )
+    if sprint:
+        detail = ""
+        if busiest_day_count:
+            detail += f"，最猛的一天聊了 {busiest_day_count} 次"
+        if streak >= 3:
+            detail += f"，最长连续 {streak} 天没歇过"
+        return (
+            f"{label}算是跟 AI 干了票大的：{sessions} 次会话、{projects} 个项目同时推{detail}。"
+            f"{agents} 个干员里 {top} 出力最多。活儿是 AI 干的，主意是我拿的——这买卖不亏。"
+        )
+    detail = f"，{weekend} 次是周末聊的" if weekend else ""
+    return (
+        f"翻了下{label}的 AI 使用记录：{sessions} 次会话，{agents} 个干员，"
+        f"{projects} 个项目，不卷不躺，稳定输出{detail}。用得最顺手的是 {top}。"
+        f"说不上轰轰烈烈，但一个人懒得干的琐碎活儿，确实都交出去了。"
+    )
+
+
 def check_writing_style(data: Dict[str, Any]) -> List[str]:
     """Scan narrative + agent notes for AI-tone phrases. Returns warnings."""
     texts: List[tuple[str, str]] = []
@@ -299,6 +353,8 @@ def check_writing_style(data: Dict[str, Any]) -> List[str]:
         texts.append(("narrative.headline", str(narrative["headline"])))
     for i, p in enumerate(narrative.get("paragraphs") or []):
         texts.append((f"narrative.paragraphs[{i}]", str(p)))
+    if narrative.get("share_text"):
+        texts.append(("narrative.share_text", str(narrative["share_text"])))
     for agent in data.get("agents") or []:
         note = (agent or {}).get("note")
         if note:
@@ -506,6 +562,17 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
     }
 
     style_warnings = check_writing_style(data)
+
+    # 分享文案：Agent 代写（narrative.share_text）优先，缺失时用确定性骨架兜底
+    provided_share = str(narrative.get("share_text") or "").strip()
+    if provided_share and len(provided_share) > 160:
+        style_warnings.append(
+            f"narrative.share_text 太长了（{len(provided_share)} 字），分享到微信/朋友圈建议 100-150 字"
+        )
+    result["share_text"] = provided_share or build_share_text(
+        result["stats"], fun, period_noun(start, end), period_label(start, end)
+    )
+
     if style_warnings:
         result["style_warnings"] = style_warnings
     return result

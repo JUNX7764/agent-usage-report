@@ -322,7 +322,8 @@ def render(data: Dict[str, Any]) -> str:
         "sessions": stats.get("sessions_total", 0),
         "projects": stats.get("projects_count", 0),
         "top": str(stats.get("top_agent") or ""),
-    }, ensure_ascii=False).replace("</", "<\\/")  # never break out of <script>
+        "text": str(data.get("share_text") or ""),
+    }, ensure_ascii=False).replace("</", "<\\/").replace(" ", "\\u2028").replace(" ", "\\u2029")  # never break out of <script>
     parts.append(
         '<button class="share-btn" id="shareBtn" type="button">SHARE ↗</button>'
         '<div class="share-pop" id="sharePop">'
@@ -340,8 +341,7 @@ def render(data: Dict[str, Any]) -> str:
         "btn.addEventListener('click',function(){pop.classList.toggle('open')});"
         "document.addEventListener('click',function(e){if(!pop.contains(e.target)&&e.target!==btn)pop.classList.remove('open')});"
         "document.getElementById('shareText').addEventListener('click',function(){"
-        "var t='我用 Agent 干了啥 · '+META.label+'：'+META.agents+' 个 AI 干员、'+META.sessions+' 次会话、'+META.projects+' 个项目'"
-        "+(META.top?'，最强搭档 '+META.top:'')+'。—— 仅供个人回顾与分享娱乐';"
+        "var t=META.text||('我用 Agent 干了啥 · '+META.label);"
         "var done=function(){say('已复制，去粘贴吧')},fail=function(){say('复制失败，浏览器限制了剪贴板')};"
         "if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fail)}else{fail()}"
         "pop.classList.remove('open')});"

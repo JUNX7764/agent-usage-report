@@ -299,6 +299,46 @@ class RenderReportTests(unittest.TestCase):
         self.assertIn('class="timeline"', html_text)
         self.assertIn("并肩作战", html_text)
 
+    def test_share_text_fallback_night_variant(self):
+        # sample_input 的 4 条时间戳含 1 次深夜（1/4 > 0.2）→ 深夜型骨架
+        data = build_mod.build(sample_input())
+        text = data["share_text"]
+        self.assertIn("半夜", text)
+        self.assertIn("替我卷", text)
+        self.assertIn("最长连续 3 天没断过", text)
+        html_text = render_mod.render(data)
+        self.assertIn(text, html_text)
+
+    def test_share_text_fallback_sprint_variant(self):
+        inp = sample_input()
+        inp["session_timestamps"] = [
+            f"2026-04-{day:02d}T10:00:00" for day in range(1, 16)
+        ]  # 连续 15 天 → 冲刺型
+        data = build_mod.build(inp)
+        self.assertIn("干了票大的", data["share_text"])
+
+    def test_share_text_fallback_daily_variant(self):
+        inp = sample_input()
+        inp["session_timestamps"] = ["2026-04-10T14:00:00", "2026-05-20T16:00:00"]
+        data = build_mod.build(inp)
+        self.assertIn("稳定输出", data["share_text"])
+
+    def test_share_text_agent_written_passes_through(self):
+        inp = sample_input()
+        custom = "这季度跟 AI 混熟了，374 次会话里有一半是半夜聊的，值了。"
+        inp["narrative"]["share_text"] = custom
+        data = build_mod.build(inp)
+        self.assertEqual(data["share_text"], custom)
+        self.assertIn(custom, render_mod.render(data))
+
+    def test_share_text_too_long_and_ai_tone_warn(self):
+        inp = sample_input()
+        inp["narrative"]["share_text"] = "赋能" * 100  # 200 字 + AI 腔
+        data = build_mod.build(inp)
+        warnings = "\n".join(data.get("style_warnings") or [])
+        self.assertIn("share_text", warnings)
+        self.assertIn("赋能", warnings)
+
     def test_render_omits_empty_sections(self):
         minimal = {
             "owner": "匿名",
