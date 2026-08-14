@@ -143,6 +143,7 @@ def render(data: Dict[str, Any]) -> str:
     projects: List[Dict[str, Any]] = data.get("projects") or []
     timeline: List[Dict[str, Any]] = data.get("timeline") or []
     narrative = data.get("narrative") or {}
+    noun = str(meta.get("period_noun") or "本季")
 
     parts: List[str] = []
     parts.append("<!DOCTYPE html>\n<html lang=\"zh\"><head><meta charset=\"utf-8\">")
@@ -164,7 +165,7 @@ def render(data: Dict[str, Any]) -> str:
         ("", esc(stats.get("projects_count", 0)), "参与的项目"),
     ]
     if stats.get("top_agent"):
-        stat_cards.append(("text c", f"{agent_emoji(stats['top_agent'], None)} {esc(stats['top_agent'])}", "本季最强搭档"))
+        stat_cards.append(("text c", f"{agent_emoji(stats['top_agent'], None)} {esc(stats['top_agent'])}", f"{esc(noun)}最强搭档"))
     parts.append("<div class=\"stats\">")
     for cls, num, label in stat_cards:
         parts.append(f"<div class=\"stat {cls}\"><b>{num}</b><span>{label}</span></div>")
@@ -228,7 +229,7 @@ def render(data: Dict[str, Any]) -> str:
         parts.append("<div class=\"grid\">")
         for i, p in enumerate(projects):
             parts.append("<div class=\"card\">")
-            parts.append(f'<span class="tag {"alt" if i % 2 else ""}">本季成果</span>')
+            parts.append(f'<span class="tag {"alt" if i % 2 else ""}">{esc(noun)}成果</span>')
             parts.append(f"<h3>{esc(p['name'])}</h3>")
             if p.get("one_liner"):
                 parts.append(f"<p>{esc(p['one_liner'])}</p>")
@@ -256,7 +257,7 @@ def render(data: Dict[str, Any]) -> str:
 
     # ---- timeline (vertical, grouped by month) ----
     if timeline:
-        parts.append("<div class=\"section\"><div class=\"sec-head\"><span class=\"no\">04</span><h2>本季时间线</h2><span class=\"hint\">TIMELINE</span></div>")
+        parts.append(f"<div class=\"section\"><div class=\"sec-head\"><span class=\"no\">04</span><h2>{esc(noun)}时间线</h2><span class=\"hint\">TIMELINE</span></div>")
         parts.append("<div class=\"timeline\">")
         current_month = None
         for t in sorted(timeline, key=lambda x: x.get("date") or ""):
@@ -274,7 +275,7 @@ def render(data: Dict[str, Any]) -> str:
     if narrative.get("headline") or narrative.get("paragraphs"):
         parts.append("<div class=\"section\"><div class=\"story\">")
         if narrative.get("headline"):
-            parts.append(f"<h3><mark>本季总结</mark> {esc(narrative['headline'])}</h3>")
+            parts.append(f"<h3><mark>{esc(noun)}总结</mark> {esc(narrative['headline'])}</h3>")
         for p in narrative.get("paragraphs") or []:
             parts.append(f"<p>{esc(p)}</p>")
         parts.append("</div></div>")

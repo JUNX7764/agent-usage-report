@@ -75,7 +75,7 @@ Agent 在深挖阶段结束后组装此文件。必填：`owner`、`period_start
 
 - `agents[]`：`name` 必填；`session_count` 为该 Agent 在时间段内的会话数（拿不到就省略，不编造）；`first_seen/last_seen` 为活跃区间；`note` 一句话分工。`emoji` 可省略（脚本有内置映射）。
 - `projects[]`：只放"你做的"项目（下载的开源项目不进）。`badges[].level` 可选 `""`/`rare`/`epic`（仅影响配色，不代表等级评价）。
-- `narrative`：Agent 代写的轻松总结，用户可改；`headline` 可省略。
+- `narrative`：Agent 代写的轻松总结，用户可改。**没有固定模板**：`headline` 可省略，`paragraphs` 段落数不限（建议 2–4 段），结构、切入角度、详略都由 Agent 按 `references/narrative-writing-guide.md` 的风格原则自由发挥——指南里的范文是灵感参照，不是填空模板。报告版块标题里的周期词（「本月总结」「本季总结」「今年总结」「这段时间的总结」）由脚本按实际复盘周期自动生成（`meta.period_noun`），文案里提到周期时与 `period_noun` 保持同一个词。
 - `session_timestamps`：可选。会话时间戳列表（来自文件 mtime 或会话元数据，**不读内容**即可获得）。提供后脚本确定性计算隐藏战绩。
 
 ## 校验规则（build_report_data.py 强制）

@@ -104,6 +104,25 @@ class BuildReportDataTests(unittest.TestCase):
         self.assertEqual(build_mod.period_label(date(2026, 4, 15), date(2026, 6, 30)), "202604-202606")
         self.assertEqual(build_mod.period_label(date(2026, 1, 1), date(2026, 12, 31)), "202601-202612")
 
+    def test_period_noun_matches_review_range(self):
+        self.assertEqual(build_mod.period_noun(date(2026, 4, 1), date(2026, 6, 30)), "本季")
+        self.assertEqual(build_mod.period_noun(date(2026, 5, 1), date(2026, 5, 31)), "本月")
+        self.assertEqual(build_mod.period_noun(date(2026, 1, 1), date(2026, 12, 31)), "今年")
+        self.assertEqual(build_mod.period_noun(date(2026, 4, 15), date(2026, 6, 30)), "这段时间")
+        self.assertEqual(build_mod.period_noun(date(2025, 1, 1), date(2026, 6, 30)), "这段时间")
+
+    def test_render_uses_period_noun_not_hardcoded_quarter(self):
+        data = sample_input()
+        data["period_start"] = "2026-05-01"
+        data["period_end"] = "2026-05-31"
+        report = build_mod.build(data)
+        self.assertEqual(report["meta"]["period_noun"], "本月")
+        html = render_mod.render(report)
+        self.assertIn("本月总结", html)
+        self.assertIn("本月最强搭档", html)
+        self.assertIn("本月时间线", html)
+        self.assertNotIn("本季总结", html)
+
     def test_build_computes_stats_and_fun_stats(self):
         result = build_mod.build(sample_input())
         self.assertEqual(result["meta"]["period_label"], "2026Q2")

@@ -68,6 +68,26 @@ def _last_day(year: int, month: int) -> int:
     return (date(year, month + 1, 1) - date(year, month, 1)).days
 
 
+def period_noun(start: date, end: date) -> str:
+    """Human noun for the reviewed range: 本月 / 本季 / 今年 / 这段时间.
+
+    Used for section titles (e.g. 「本季总结」) so a monthly or yearly review
+    never shows a hardcoded 「本季」.
+    """
+    if (
+        start.year == end.year
+        and start.month == end.month
+        and start.day == 1
+        and end.day == _last_day(end.year, end.month)
+    ):
+        return "本月"
+    if period_label(start, end).endswith(("Q1", "Q2", "Q3", "Q4")):
+        return "本季"
+    if (start.month, start.day) == (1, 1) and (end.month, end.day) == (12, 31) and start.year == end.year:
+        return "今年"
+    return "这段时间"
+
+
 def generate_agent_tags(agent: Dict[str, Any], all_timestamps: List[datetime]) -> List[str]:
     """Generate fun tags for an agent based on usage patterns (text only, no emoji)."""
     tags = []
@@ -364,6 +384,7 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
             "period_start": start.isoformat(),
             "period_end": end.isoformat(),
             "period_label": period_label(start, end),
+            "period_noun": period_noun(start, end),
             "generated_at": datetime.now().astimezone().isoformat(timespec="seconds"),
             
         },
