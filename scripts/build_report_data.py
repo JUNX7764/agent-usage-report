@@ -409,6 +409,19 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
             timeline.append({"date": m["date"], "project": proj["name"], "text": m["text"]})
     timeline.sort(key=lambda t: t["date"])
 
+    # 时间线兜底：没有里程碑时，从真实会话时间戳按月计数，避免时间线整块消失
+    if not timeline and timestamps:
+        monthly: Dict[str, int] = {}
+        for ts in timestamps:
+            key = ts.strftime("%Y-%m")
+            monthly[key] = monthly.get(key, 0) + 1
+        for month in sorted(monthly):
+            timeline.append({
+                "date": f"{month}-01",
+                "project": "",
+                "text": f"这个月并肩作战 {monthly[month]} 次",
+            })
+
     fun = compute_fun_stats(timestamps)
     # 复盘周期覆盖的自然月数（供「月度全勤」判定）
     fun["period_months"] = (end.year - start.year) * 12 + end.month - start.month + 1

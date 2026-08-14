@@ -346,7 +346,7 @@ def render(data: Dict[str, Any]) -> str:
         "if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fail)}else{fail()}"
         "pop.classList.remove('open')});"
         "document.getElementById('shareFile').addEventListener('click',function(){"
-        "try{var blob=new Blob(['<!DOCTYPE html>\n'+document.documentElement.outerHTML],{type:'text/html'});"
+        "try{var blob=new Blob(['<!DOCTYPE html>\\n'+document.documentElement.outerHTML],{type:'text/html'});"
         "var f=new File([blob],META.owner+'_'+META.label+'_我用Agent干了啥.html',{type:'text/html'});"
         "if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:'我用 Agent 干了啥 · '+META.label}).then(function(){say('已调起系统分享')},function(){})}"
         "else{say('当前浏览器不支持文件分享，直接把 HTML 文件发给别人就行')}}"

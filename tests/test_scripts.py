@@ -251,6 +251,13 @@ class RenderReportTests(unittest.TestCase):
         self.assertNotIn("fetch(", html)
         self.assertNotIn("XMLHttpRequest", html)
 
+    def test_share_inline_script_has_no_raw_newline(self):
+        # 内联 JS 里若混入原始换行（如 Python \n 泄进 JS 字符串）会直接语法错误，
+        # 整个 share 脚本块失效、SHARE 按钮完全无响应
+        html_text = render_mod.render(build_mod.build(sample_input()))
+        script = html_text.split("<script>")[1].split("</script>")[0]
+        self.assertNotIn("\n", script)
+
     def test_render_badges_show_text_not_dict_repr(self):
         data = build_mod.build(sample_input())
         html_text = render_mod.render(data)
@@ -279,6 +286,18 @@ class RenderReportTests(unittest.TestCase):
         self.assertIn('class="timeline"', html_text)
         self.assertNotIn("fishbone", html_text)
         self.assertIn('class="mon">2026-05<', html_text)
+
+    def test_timeline_falls_back_to_monthly_session_counts(self):
+        # 没填 milestones 时，用真实会话时间戳按月计数，时间线不应整块消失
+        inp = sample_input()
+        for p in inp["projects"]:
+            p.pop("milestones", None)
+        data = build_mod.build(inp)
+        self.assertTrue(data["timeline"])
+        self.assertTrue(all(t["project"] == "" for t in data["timeline"]))
+        html_text = render_mod.render(data)
+        self.assertIn('class="timeline"', html_text)
+        self.assertIn("并肩作战", html_text)
 
     def test_render_omits_empty_sections(self):
         minimal = {
