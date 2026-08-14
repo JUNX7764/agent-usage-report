@@ -179,6 +179,19 @@ class RenderReportTests(unittest.TestCase):
         self.assertNotIn("<b>总结</b>", html_text)
         self.assertIn("周报自动化", html_text)
 
+    def test_render_contains_share_button_and_meta(self):
+        report = build_mod.build(sample_input())
+        html = render_mod.render(report)
+        self.assertIn('id="shareBtn"', html)
+        self.assertIn('id="shareText"', html)
+        self.assertIn('id="shareFile"', html)
+        # share metadata is embedded with real stats
+        self.assertIn('"sessions": 13', html)
+        self.assertIn('"top": "Proma"', html)
+        # local-only: no network endpoint in the share script
+        self.assertNotIn("fetch(", html)
+        self.assertNotIn("XMLHttpRequest", html)
+
     def test_render_badges_show_text_not_dict_repr(self):
         data = build_mod.build(sample_input())
         html_text = render_mod.render(data)

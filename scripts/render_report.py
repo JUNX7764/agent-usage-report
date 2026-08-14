@@ -111,7 +111,17 @@ h1 mark{background:#e8ff3d;padding:0 .12em;box-shadow:4px 4px 0 #111}
 .story p + p{margin-top:12px}
 footer{margin-top:80px;border-top:2px solid #111;padding-top:18px;font-size:12px;color:#777;line-height:1.9}
 footer b{color:#111}
-@media (max-width:720px){.story{padding:26px}.stat b{font-size:40px}}
+.share-btn{position:fixed;top:18px;right:18px;z-index:99;background:#fff;border:2px solid #111;box-shadow:4px 4px 0 #111;font-family:inherit;font-size:12px;font-weight:800;letter-spacing:.18em;padding:10px 16px;cursor:pointer;transition:transform .12s}
+.share-btn:hover{background:#002fa7;color:#fff;transform:translate(-2px,-2px)}
+.share-pop{position:fixed;top:64px;right:18px;z-index:99;width:280px;background:#fff;border:2px solid #111;box-shadow:6px 6px 0 rgba(17,17,17,.9);display:none}
+.share-pop.open{display:block}
+.share-pop .opt{display:block;width:100%;text-align:left;border:0;border-bottom:1.5px solid #111;background:#fff;padding:13px 16px;font-family:inherit;font-size:13px;font-weight:700;cursor:pointer}
+.share-pop .opt:hover{background:#e8ff3d}
+.share-pop .opt small{display:block;font-weight:400;color:#777;margin-top:3px;font-size:11.5px}
+.share-pop .note{padding:10px 16px;font-size:11px;color:#888;letter-spacing:.03em}
+.share-toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111;color:#e8ff3d;font-size:12.5px;font-weight:700;letter-spacing:.06em;padding:10px 18px;display:none;z-index:99}
+.share-toast.show{display:block}
+@media (max-width:720px){.story{padding:26px}.stat b{font-size:40px}.share-btn{top:12px;right:12px;padding:8px 12px}.share-pop{right:12px;left:12px;width:auto}}
 """
 
 
@@ -279,6 +289,47 @@ def render(data: Dict[str, Any]) -> str:
         for p in narrative.get("paragraphs") or []:
             parts.append(f"<p>{esc(p)}</p>")
         parts.append("</div></div>")
+
+    # ---- share (local-only: Web Share API / clipboard, zero network) ----
+    share_meta = json.dumps({
+        "owner": str(meta.get("owner", "")),
+        "label": str(meta.get("period_label", "")),
+        "agents": stats.get("agents_count", 0),
+        "sessions": stats.get("sessions_total", 0),
+        "projects": stats.get("projects_count", 0),
+        "top": str(stats.get("top_agent") or ""),
+    }, ensure_ascii=False).replace("</", "<\\/")  # never break out of <script>
+    parts.append(
+        '<button class="share-btn" id="shareBtn" type="button">SHARE ↗</button>'
+        '<div class="share-pop" id="sharePop">'
+        '<button class="opt" id="shareFile" type="button">分享这份报告文件<small>调起系统分享（微信 / AirDrop / 邮件），把整个 HTML 发出去</small></button>'
+        '<button class="opt" id="shareText" type="button">复制分享文案<small>一段战报文字，直接粘贴到微信 / 朋友圈</small></button>'
+        '<div class="note">文件不上传任何地方，分享动作只发生在你自己的设备上。</div>'
+        '</div>'
+        '<div class="share-toast" id="shareToast"></div>'
+    )
+    parts.append(
+        "<script>(function(){"
+        f"var META={share_meta};"
+        "var btn=document.getElementById('shareBtn'),pop=document.getElementById('sharePop'),toast=document.getElementById('shareToast');"
+        "function say(t){toast.textContent=t;toast.classList.add('show');setTimeout(function(){toast.classList.remove('show')},2200)}"
+        "btn.addEventListener('click',function(){pop.classList.toggle('open')});"
+        "document.addEventListener('click',function(e){if(!pop.contains(e.target)&&e.target!==btn)pop.classList.remove('open')});"
+        "document.getElementById('shareText').addEventListener('click',function(){"
+        "var t='我用 Agent 干了啥 · '+META.label+'：'+META.agents+' 个 AI 干员、'+META.sessions+' 次会话、'+META.projects+' 个项目'"
+        "+(META.top?'，最强搭档 '+META.top:'')+'。—— 仅供个人回顾与分享娱乐';"
+        "var done=function(){say('已复制，去粘贴吧')},fail=function(){say('复制失败，浏览器限制了剪贴板')};"
+        "if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(t).then(done,fail)}else{fail()}"
+        "pop.classList.remove('open')});"
+        "document.getElementById('shareFile').addEventListener('click',function(){"
+        "try{var blob=new Blob(['<!DOCTYPE html>\n'+document.documentElement.outerHTML],{type:'text/html'});"
+        "var f=new File([blob],META.owner+'_'+META.label+'_我用Agent干了啥.html',{type:'text/html'});"
+        "if(navigator.canShare&&navigator.canShare({files:[f]})){navigator.share({files:[f],title:'我用 Agent 干了啥 · '+META.label}).then(function(){say('已调起系统分享')},function(){})}"
+        "else{say('当前浏览器不支持文件分享，直接把 HTML 文件发给别人就行')}}"
+        "catch(e){say('当前浏览器不支持文件分享，直接把 HTML 文件发给别人就行')}"
+        "pop.classList.remove('open')});"
+        "})();</script>"
+    )
 
     # ---- footer ----
     parts.append("<footer>")
