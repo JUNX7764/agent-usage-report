@@ -1,6 +1,6 @@
 ---
 name: agent-usage-report
-version: 0.2.8
+version: 0.2.9
 description: 盘点本机 AI Agent 使用记录，生成"我用 Agent 干了啥"趣味战绩报告（单文件 HTML）。用户说"看看我用 Agent 干了啥""做个 AI 使用盘点""Agent 使用回顾""我的 AI 战绩""电脑里有哪些 AI 痕迹""生成我的 Agent 年度报告"时使用。只关注本机 Agent 工具（Proma、Claude Code、Cursor、Codex 等），不关注网页版聊天机器人；只读盘点、不复制证据、不要求补充材料、不做任何评价或评审；输出仅供个人回顾与娱乐分享。
 ---
 
@@ -50,6 +50,7 @@ macOS / Linux / Windows 均可运行：
 - `<work>`（过程目录）= `~/.agent-usage-report/{期间标签}/`（Windows 为 `%USERPROFILE%\.agent-usage-report\{期间标签}\`）。扫描结果、安全报告、`report_input.json`、`report_data.json` 等所有机器 JSON 都写到这里。**严禁放在桌面或任何用户日常浏览的位置**——它是隐藏目录，用户看不到也不该看到。
 - `<draft-root>`（交付目录）= `~/Desktop/{署名}_{期间标签}_我用Agent干了啥/`，里面**只有**最终 HTML 一个文件（见 Step 7）。
 - 桌面是用户的脸面：除了交付文件夹，不在桌面留下任何过程产物。
+- `<skill_dir>` = 本 SKILL.md 所在目录，下文所有 `scripts/xxx.py` 命令都相对它。**很多 Agent 的 shell 每执行完一条命令就重置 cwd（Claude Code 就是）**——每条命令要么用绝对路径，要么把 `cd <skill_dir> &&` 和命令写在同一条里，不要假设上一条命令的目录还在。
 
 ### 1. 扫描本机已安装的 AI Agent
 

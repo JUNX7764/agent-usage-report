@@ -5,6 +5,20 @@
 它是什么：一次轻松的 AI 使用回顾。
 它不是：评审材料、考核依据、绩效评分——不需要你补充任何材料，不会给任何人打分。
 
+## 30 秒上手
+
+**这不是需要部署的软件，是给你正在用的 AI Agent 装的一个技能。**不用跑测试、不用配环境，三选一：
+
+1. **最省事**：把本仓库链接直接发给你的 Agent（Claude Code / Proma / Hermes / Codex 等）：
+   > 装一下这个 skill：https://github.com/JUNX7764/agent-usage-report ，装好了帮我生成报告
+2. **手动装**：clone 到你 Agent 的 skills 目录（如 `~/.claude/skills/`、`~/.hermes/skills/`），然后对它说：
+   > 看看我用 Agent 干了啥
+3. **不装也行**：clone 下来，让 Agent「读这个仓库的 SKILL.md，按它帮我生成报告」
+
+Agent 会自己问你两件事（统计哪个时间段、报告署什么名），然后全自动跑完，报告出现在桌面：`~/Desktop/{署名}_{期间标签}_我用Agent干了啥/`。
+
+> 开发者流程（跑测试、改脚本）见文末「开发与验证」——日常使用不需要。
+
 ## 它能做什么
 
 - **自动发现本机 AI Agent**：扫描 Proma、Claude Code、OpenCode、Hermes、Cursor、Codex、Windsurf、Aider、Cline、Kimi Code、Gemini CLI、Qwen Code、Zed、Warp 等 50+ 常见 Agent（macOS / Linux / Windows 跨平台）
@@ -12,22 +26,17 @@
 - **识别你参与的项目**：自动区分「你做的」和「下载的开源项目」，后者默认排除
 - **盘点会话成果**：按主题聚类会话，关联到项目，标注里程碑与成就
 - **生成单文件 HTML 报告**：数据大字报、隐藏战绩（夜猫子时刻/周末加班/连续并肩天数）、AI 干员图鉴、成就墙、跨项目时间线
+- **一键分享**：报告右上角 SHARE，复制一段有人味儿的战报文案，或调起系统分享把 HTML 发出去（全本地，零网络请求）
 - **瑞士国际主义视觉**：网格点阵 + 克莱因蓝高亮 + 无衬线字体，单文件离线可开，直接截图或发文件给朋友
 
-## 怎么用
-
-这是一个 **Agent Skill**，面向 Proma / Claude Code / Codex 等 Agent 工作流。安装后，直接对你的 Agent 说：
-
-> 看看我用 Agent 干了啥
-
-Agent 会按以下流程执行：
+## Agent 会执行的流程
 
 1. 确认时间段与报告署名（一次问完，不收集工号等身份信息）
 2. 扫描本机已安装的 AI Agent（只检测存在性，不读内容）
 3. 扫描项目目录，识别 AI 参与过的项目（只查痕迹，不读内容）
 4. 安全扫描：排除密钥、识别潜在的 prompt 注入文件
 5. 深挖会话，聚类成果，按时间段统计
-6. 渲染单文件 HTML 到桌面：`~/Desktop/{署名}_{期间标签}_我用Agent干了啥.html`
+6. 渲染单文件 HTML 到桌面：`~/Desktop/{署名}_{期间标签}_我用Agent干了啥/`
 
 ## 隐私承诺
 
@@ -35,6 +44,7 @@ Agent 会按以下流程执行：
 - **密钥不入报告**：安全扫描仅用于排除敏感信息，绝不回显值
 - **不编造**：会话记录只能证明「讨论过/尝试过/执行过」，找不到就如实标注「未记录」
 - **范围可控**：未确认的项目与会话一律不读取
+- **过程文件不可见**：扫描中间产物都在 `~/.agent-usage-report/` 隐藏目录，桌面只出现最终报告
 
 ## 开发与验证
 
@@ -63,7 +73,7 @@ scripts/
   render_report.py                        # 纯模板 HTML 渲染
 references/
   agent-discovery.md                      # Agent 检测与路径映射
-  source-adapters.md                      # 各家 Agent 会话读取方法
+  source-adapters.md                      # 各家 Agent 会话读取方法（含实测可抄的片段）
   output-contract.md                      # 报告数据与输出契约
   safety-policy.md                        # 授权与隐私边界
   narrative-writing-guide.md              # 文案写作指南

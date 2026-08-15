@@ -33,6 +33,25 @@ Refer to `references/agent-discovery.md` for the full agent detection matrix.
    - Windows (PowerShell): `Get-ChildItem "$env:USERPROFILE\.claude\transcripts\*.jsonl" | Sort-Object LastWriteTime -Descending`
 2. Filter by target period using file modification time.
 3. Read JSONL progressively - each line is a JSON object with `type` (user/assistant/system) and `message` fields.
+
+**Tested snippets**（两种布局可能同时存在，都验证过）: 新版 `~/.claude/transcripts/ses_*.jsonl` 每行都有 `timestamp`（ISO 带 Z）；旧版 `~/.claude/projects/<slug>/*.jsonl` 的 slug 是项目路径把 `/` 换成 `-`，**首行可能是没有 timestamp 的元数据行，要跳过**，项目真实路径取行内 `cwd` 字段、别靠 slug 反推。批量取时间戳：
+
+```bash
+python3 - <<'EOF'
+import json, glob, os
+home = os.path.expanduser('~')
+files = glob.glob(f'{home}/.claude/transcripts/*.jsonl') + glob.glob(f'{home}/.claude/projects/*/*.jsonl')
+for p in files:
+    for line in open(p, encoding='utf-8', errors='replace'):
+        try:
+            d = json.loads(line)
+        except json.JSONDecodeError:
+            continue
+        if d.get('timestamp'):
+            print(d['timestamp'])  # 每个会话文件的首条带时间戳的行
+            break
+EOF
+```
 4. Extract: project path (from `cwd` or session metadata), user instructions, assistant actions, tool calls, file changes.
 5. Check `~/.claude/projects/` (macOS) or `%USERPROFILE%\.claude\projects\` (Windows) for per-project session organization.
 6. `~/.claude/history.jsonl` may contain a global command history - useful for discovery, not for outcome evidence.
@@ -49,6 +68,15 @@ Refer to `references/agent-discovery.md` for the full agent detection matrix.
 2. Look for session/conversation tables: `.tables` then `SELECT * FROM <table> LIMIT 5` to understand schema.
 3. Check `checkpoints/` for session checkpoints.
 4. Check `sessions/` if it exists.
+
+**Tested snippets**（对着真实 107 个会话验证过）: 会话在 `~/.hermes/sessions/YYYYMMDD_HHMMSS_<id>.jsonl`，**文件名前缀就是会话开始时间**（本地时间），数会话、取时间戳用文件名即可，不用打开文件：
+
+```bash
+ls ~/.hermes/sessions/*.jsonl | wc -l          # 会话总数
+ls ~/.hermes/sessions/ | sed -n 's/^\([0-9]\{8\}\)_\([0-9]\{6\}\)_.*/\1 \2/p'  # 每个会话的 YYYYMMDD HHMMSS
+```
+
+归档会话在 `~/.hermes/sessions/legacy-*/` 子目录和 `store/` 里，统计时别漏。
 5. `pairing/` shows messaging integrations (DingTalk, Feishu, WeChat) - record integration type, not credentials.
 6. `skills/` shows installed skills - useful for understanding capabilities used.
 7. If SQLite schema is unclear or encrypted, ask the user to export via Hermes Desktop UI.
@@ -99,6 +127,20 @@ Refer to `references/agent-discovery.md` for the full agent detection matrix.
 
 1. Recent versions store everything in SQLite: `~/.local/share/opencode/opencode.db`. Open read-only (Python: `sqlite3.connect(f"file:{path}?mode=ro", uri=True)`), `SELECT` only, never write or copy the file (it can be many GB).
 2. Useful metadata before content authorization: the `session` table rows carry the project `directory`, `title`, and creation/update timestamps — enough for per-project session counts, active date ranges, and timeline stats without reading any message content.
+
+**Tested snippets**（对着真实 295 会话的库验证过，抄就能用）:
+
+```bash
+# 会话数按项目分组（项目归因）
+sqlite3 -readonly ~/.local/share/opencode/opencode.db \
+  "SELECT directory, COUNT(*) FROM session GROUP BY directory ORDER BY COUNT(*) DESC;"
+
+# 全部会话时间戳（隐藏战绩/时间线用）；time_created 是 epoch 毫秒
+sqlite3 -readonly ~/.local/share/opencode/opencode.db \
+  "SELECT datetime(time_created/1000,'unixepoch','localtime') FROM session;"
+```
+
+`session` 表关键字段：`directory` / `title` / `time_created` / `time_updated`（都是 epoch 毫秒）。**没有 `created_at` 列**——别猜列名，拿不准先 `.schema session`。
 3. Older versions keep JSON files under `storage/session/<projectID>/` + `storage/message/` in the same directory; scan by file mtime and read session JSON for titles only.
 4. Group sessions by their project `directory` field for project attribution; sessions under the home directory are general/chat usage, not project work.
 5. The user may be running OpenCode right now to execute this very skill — if the scan missed it, that's a red flag; ask the user which tool they are currently using.
