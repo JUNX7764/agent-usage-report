@@ -1,6 +1,6 @@
 ---
 name: agent-usage-report
-version: 0.2.7
+version: 0.2.8
 description: 盘点本机 AI Agent 使用记录，生成"我用 Agent 干了啥"趣味战绩报告（单文件 HTML）。用户说"看看我用 Agent 干了啥""做个 AI 使用盘点""Agent 使用回顾""我的 AI 战绩""电脑里有哪些 AI 痕迹""生成我的 Agent 年度报告"时使用。只关注本机 Agent 工具（Proma、Claude Code、Cursor、Codex 等），不关注网页版聊天机器人；只读盘点、不复制证据、不要求补充材料、不做任何评价或评审；输出仅供个人回顾与娱乐分享。
 ---
 
@@ -45,6 +45,11 @@ macOS / Linux / Windows 均可运行：
 2. **报告上署什么名字？**（真名、昵称、网名都行；也可以不署名）。
 
 不收集工号、职位等任何身份信息。报告默认使用瑞士国际主义风格（网格点阵 + IKB 克莱因蓝高亮 + 无衬线字体）。
+
+**路径约定（全流程生效）**：
+- `<work>`（过程目录）= `~/.agent-usage-report/{期间标签}/`（Windows 为 `%USERPROFILE%\.agent-usage-report\{期间标签}\`）。扫描结果、安全报告、`report_input.json`、`report_data.json` 等所有机器 JSON 都写到这里。**严禁放在桌面或任何用户日常浏览的位置**——它是隐藏目录，用户看不到也不该看到。
+- `<draft-root>`（交付目录）= `~/Desktop/{署名}_{期间标签}_我用Agent干了啥/`，里面**只有**最终 HTML 一个文件（见 Step 7）。
+- 桌面是用户的脸面：除了交付文件夹，不在桌面留下任何过程产物。
 
 ### 1. 扫描本机已安装的 AI Agent
 
@@ -159,7 +164,7 @@ python3 scripts/render_report.py <work>/report_data.json -o <draft-root>/{署名
 - 期间标签自动推导：正好是自然季度则用 `2026Q2` 形式，否则 `202604-202606`。
 - 文件名与文件夹同名，例如 `~/Desktop/小朱_2026Q2_我用Agent干了啥/小朱_2026Q2_我用Agent干了啥.html`。
 - 目录已存在时追加 `_v2`、`_v3`（文件夹与内部文件名同步加后缀）。
-- 交付目录里**只有这一个 HTML 文件**（机器 JSON 留在 `<work>/`，不给用户看）。
+- 交付目录里**只有这一个 HTML 文件**（机器 JSON 留在 `<work>/`，不给用户看；`<work>` 本身是 home 下的隐藏目录，见 Step 0 路径约定）。
 
 用大白话告诉用户：
 
