@@ -1,6 +1,6 @@
 ---
 name: agent-usage-report
-version: 0.2.9
+version: 0.2.10
 description: 盘点本机 AI Agent 使用记录，生成"我用 Agent 干了啥"趣味战绩报告（单文件 HTML）。用户说"看看我用 Agent 干了啥""做个 AI 使用盘点""Agent 使用回顾""我的 AI 战绩""电脑里有哪些 AI 痕迹""生成我的 Agent 年度报告"时使用。只关注本机 Agent 工具（Proma、Claude Code、Cursor、Codex 等），不关注网页版聊天机器人；只读盘点、不复制证据、不要求补充材料、不做任何评价或评审；输出仅供个人回顾与娱乐分享。
 ---
 
