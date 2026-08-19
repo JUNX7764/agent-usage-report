@@ -90,7 +90,11 @@ def _agent_paths() -> dict[str, list[Path]]:
             appdata / "DingTalk" / "Wukong",
         ],
         "千问办公": [appdata / "QianwenOffice"],
-        "DscAiWork": [appdata / "DscAiWork", home / "DscAiWork"],
+        "DscAiWork": [
+            appdata / "DscAiWork",
+            home / "DscAiWork",
+            Path("/Users/atomic/DscAiWork"),
+        ],
         # Code completion tools
         "Tabnine": [appdata / "TabNine"],
         "Codeium": [appdata / "Codeium", local / "Codeium"],
