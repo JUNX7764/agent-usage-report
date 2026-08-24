@@ -40,6 +40,34 @@ class ScanAgentsTests(unittest.TestCase):
              mock.patch.object(scan_mod, "_local_appdata", lambda: appdata):
             return scan_mod.scan()
 
+    def test_deepseek_harness_detected_and_not_flagged_unknown(self):
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            session = home / ".dsh" / "sessions" / "--home-u-demo--" / "session-abc"
+            session.mkdir(parents=True)
+            (session / "session.jsonl.zstd").write_bytes(b"x")
+            (home / ".dsh" / "storages").mkdir()
+            (home / ".dsh" / "storages" / "workspace.json").write_text("{}")
+            result = self._scan_with_home(home)
+
+        entries = [a for a in result["agents_found"] if a["name"] == "DeepSeek Harness"]
+        self.assertEqual(len(entries), 1, "DeepSeek Harness must appear exactly once")
+        self.assertEqual(entries[0]["category"], "agent")
+        unknown_paths = [c["path"] for c in result["unknown_data_dir_candidates"]]
+        self.assertNotIn(str(home / ".dsh"), unknown_paths)
+
+    def test_deepseek_harness_dsh_home_env_override(self):
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            custom = home / "custom-dsh-home"
+            (custom / "sessions").mkdir(parents=True)
+            with mock.patch.dict(os.environ, {"DSH_HOME": str(custom)}):
+                result = self._scan_with_home(home)
+
+        entries = [a for a in result["agents_found"] if a["name"] == "DeepSeek Harness"]
+        self.assertEqual(len(entries), 1)
+        self.assertIn(str(custom), entries[0]["paths"])
+
     def test_multiple_candidate_paths_aggregate_into_one_entry(self):
         with TemporaryDirectory() as td:
             home = Path(td)

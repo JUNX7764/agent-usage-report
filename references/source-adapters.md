@@ -145,6 +145,36 @@ sqlite3 -readonly ~/.local/share/opencode/opencode.db \
 4. Group sessions by their project `directory` field for project attribution; sessions under the home directory are general/chat usage, not project work.
 5. The user may be running OpenCode right now to execute this very skill — if the scan missed it, that's a red flag; ask the user which tool they are currently using.
 
+## DeepSeek Harness (dsh)
+
+**Location**:
+- 数据根：`$DSH_HOME`（环境变量可重定向），默认 `~/.dsh/`；项目本地模式用项目根 `.dsh-home/`
+- 会话日志：`~/.dsh/sessions/--<编码后的工作区路径>--/session-<uuid>/session.jsonl.zstd`
+- 工作区注册表：`~/.dsh/storages/workspace.json`；记忆库：`~/.dsh/memory/memory.db`；插件/配置：`~/.dsh/profiles/`
+- ⚠️ `~/.dsh/.credentials.yaml` 明文存各家 API key：**禁止读取、回显或复制**
+
+1. 会话日志是 **每行一个独立 zstd 帧** 的压缩 JSONL（append-only）。Python 3.8–3.13 标准库没有 zstd：用 `zstdcat` 解压，或 Python 3.14+ 的 `compression.zstd`。逐帧压缩意味着个别行损坏不影响其余行，适合渐进读取。
+2. 工作区目录名编码：绝对路径的分隔符替换为连字符、首尾加双连字符（如 `/home/u/demo` → `--home-u-demo--`）。拿不准对应关系时读 `storages/workspace.json` 注册表反查，不要自己猜编码。
+3. 每个会话首行是 `SessionHeader`（元数据独立于事件流，实测字段）：`type: "session"` / `version` / `id` / `createdAt`（Unix epoch **毫秒**）/ `cwd` / `delegationDepth`。这些元数据已足够做项目归因和活跃区间统计，不必读消息正文。
+4. dsh 于 2026-08-13 以 developer preview 发布，官方明说不保证兼容性：schema 拿不准先解压首行看字段，别硬编码事件类型。
+
+**Snippets**（2026-08-24 已在 macOS 真实 `~/.dsh` 数据上验证目录布局与 SessionHeader 字段；dsh 仍是 developer preview，跑之前对当前版本再确认一次）：
+
+```bash
+# 列出全部会话及所属工作区
+ls -d ~/.dsh/sessions/*/*/
+
+# 读某会话头部（首行 SessionHeader；createdAt 为 epoch 毫秒）
+zstdcat ~/.dsh/sessions/--home-u-demo--/session-*/session.jsonl.zstd | head -1
+
+# 全部会话的创建时间（每会话取首行）
+for f in ~/.dsh/sessions/*/*/session.jsonl.zstd; do zstdcat "$f" | head -1; done
+
+# 没有 zstdcat 时（macOS 默认未装；Python 3.13 及以下标准库无 zstd），Node 24+ 可直接解压：
+node -e 'const b=require("fs").readFileSync(process.argv[1]);require("zlib").zstdDecompress(b,(e,o)=>{if(e)throw e;console.log(o.toString().split("\n")[0])})' \
+  ~/.dsh/sessions/--home-u-demo--/session-*/session.jsonl.zstd
+```
+
 ## DscAiWork (大搜车内部 Agent)
 
 **Location**:

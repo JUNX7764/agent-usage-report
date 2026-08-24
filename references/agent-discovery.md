@@ -58,6 +58,7 @@
 | **OMP** | `~/Library/Application Support/OMP/` | `%LOCALAPPDATA%\OMP\` | JSONL / SQLite | Check session storage; search for `.omp/` configs |
 | **Gemini CLI** | `~/.gemini/` | `%USERPROFILE%\.gemini\` | JSON / Log | Check local data; may include conversation logs |
 | **Antigravity CLI** | `~/.antigravity/` or `~/.agy/` | `%USERPROFILE%\.antigravity\` | JSON / Log | Check local data; may include conversation logs |
+| **DeepSeek Harness (dsh)** | `~/.dsh/`（即 `$DSH_HOME`，可被环境变量重定向；会话在 `sessions/--<工作区路径编码>--/session-<uuid>/session.jsonl.zstd`，zstd 压缩 JSONL）+ 项目本地 `.dsh-home/` | `%USERPROFILE%\.dsh\` + 项目本地 `.dsh-home\` | zstd JSONL + JSON + SQLite（`memory.db`） | 用 `zstdcat` 解压会话（Python 3.13 及以下标准库无 zstd）；首行 SessionHeader 含 cwd + `createdAt`（epoch 毫秒）；工作区映射查 `storages/workspace.json`；`.credentials.yaml` 是明文密钥，禁止读取；搜索项目级 `.dsh/`、`.dsh-home/` |
 | **OpenCode** | `~/.local/share/opencode/` (XDG data dir; sessions in `opencode.db` SQLite or `storage/`) + `~/.opencode/` (binary/config) | `%USERPROFILE%\.local\share\opencode\` or `%LOCALAPPDATA%\opencode\` | SQLite + JSON | Read-only SELECT on `opencode.db` (`session` table has project directory + title + timestamps); search for `.opencode/` configs |
 | **Alma** | `~/Library/Application Support/Alma/` | `%LOCALAPPDATA%\Alma\` | JSONL / SQLite | Check session storage; search for `.alma/` configs |
 | **Pi** | `~/Library/Application Support/Pi/` | `%LOCALAPPDATA%\Pi\` | JSONL / SQLite | Check session storage; search for `.pi/` configs |
@@ -90,7 +91,7 @@
 | **Raycast** | `~/Library/Application Support/Raycast/` | N/A | SQLite / JSON | macOS launcher; includes Raycast AI history and extensions |
 | **Raycast AI Exporter** | `~/Library/Application Support/Raycast/` (same as Raycast) | N/A | SQLite / JSON | Companion utility for exporting Raycast AI conversations |
 
-> **Verification status**: paths for mainstream agents (Proma, Claude Code, Hermes, Cursor, Codex, Gemini CLI, OpenCode, Windsurf, LM Studio, Copilot CLI) are verified on real machines. Niche agents with `Application Support/<Name>`-style paths follow vendor naming conventions and are best-effort — treat scan output as a hypothesis and confirm with the user before concluding "not installed / not used".
+> **Verification status**: paths for mainstream agents (Proma, Claude Code, Hermes, Cursor, Codex, Gemini CLI, OpenCode, Windsurf, LM Studio, Copilot CLI) are verified on real machines. Niche agents with `Application Support/<Name>`-style paths follow vendor naming conventions and are best-effort — treat scan output as a hypothesis and confirm with the user before concluding "not installed / not used". DeepSeek Harness (`~/.dsh/`) was added 2026-08 and verified on a real macOS machine (directory layout + SessionHeader fields); dsh is still a developer preview and may change layouts — confirm against real data when in doubt.
 >
 > **Self-healing mechanisms** (scan_agents.py, schema ≥ 1.1): besides the path catalog, the scanner (1) checks PATH / running processes / env markers for known agents and reports `runtime_detected_but_no_data_dir` when an agent is clearly present but its data dir was missed, and (2) heuristically scans `~/.config`, `~/.local/share` and home dotdirs for session-looking directories not in the catalog (`unknown_data_dir_candidates`). Both outputs must be confirmed with the user, never silently ignored.
 >
@@ -105,6 +106,7 @@ Check each project directory for these files/directories to determine AI partici
 .cursor/          CLAUDE.md         .clinerules       .aider.conf.yml
 .codex/           .cursorrules      .windsurfrules    .ocx/
 .opencode/        .hermes/          .continue/        .github/copilot-instructions.md
+.dsh/             .dsh-home/
 .workbuddy/       .trae/            .qoder/           .qoderwork/
 .wukong/          .qianwen/         .codeium/         .bolt/
 .v0/              .replit/          .lovable/         .gpt-engineer/
@@ -146,7 +148,7 @@ The script auto-detects the platform and checks the correct paths for each agent
 ```bash
 # 1. Detect installed AI agents
 for d in ~/.proma ~/.claude ~/.cursor ~/.hermes ~/.aider ~/.ollama \
-         ~/.local/share/opencode ~/.opencode ~/.lmstudio \
+         ~/.local/share/opencode ~/.opencode ~/.lmstudio ~/.dsh \
          ~/Library/Application\ Support/Cursor \
          ~/Library/Application\ Support/Claude \
          ~/Library/Application\ Support/LM\ Studio \
@@ -159,6 +161,7 @@ find <project-root> -maxdepth 2 \( \
   -name ".claude" -o -name ".cursor" -o -name "AGENTS.md" -o -name "CLAUDE.md" \
   -o -name ".cursorrules" -o -name ".aider*" -o -name ".codex" \
   -o -name ".opencode" -o -name ".ocx" -o -name ".hermes" \
+  -o -name ".dsh" -o -name ".dsh-home" \
   \) -not -path "*/node_modules/*" 2>/dev/null
 
 # 3. Check Git attribution
@@ -178,6 +181,7 @@ $paths = @(
   "$env:USERPROFILE\.ollama",
   "$env:USERPROFILE\.local\share\opencode",
   "$env:USERPROFILE\.opencode",
+  "$env:USERPROFILE\.dsh",
   "$env:USERPROFILE\.lmstudio",
   "$env:APPDATA\Cursor",
   "$env:APPDATA\Claude",
@@ -191,7 +195,7 @@ foreach ($p in $paths) {
 
 # 2. Scan project directories for AI tool configs
 Get-ChildItem -Path <project-root> -Recurse -Depth 2 -Force -ErrorAction SilentlyContinue |
-  Where-Object { $_.Name -match '^\.(claude|cursor|codex|hermes|aider|opencode|ocx|continue)|^(AGENTS|CLAUDE)\.md$|^\.cursorrules$|^\.windsurfrules$|^\.clinerules$|^\.aider' } |
+  Where-Object { $_.Name -match '^\.(claude|cursor|codex|hermes|aider|opencode|ocx|continue|dsh|dsh-home)|^(AGENTS|CLAUDE)\.md$|^\.cursorrules$|^\.windsurfrules$|^\.clinerules$|^\.aider' } |
   Select-Object -ExpandProperty FullName
 
 # 3. Check Git attribution

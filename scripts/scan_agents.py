@@ -108,6 +108,10 @@ def _agent_paths() -> dict[str, list[Path]]:
         "Gemini CLI": [home / ".gemini"],
         "Qwen Code": [home / ".qwen"],
         "Antigravity CLI": [home / ".antigravity", home / ".agy"],
+        "DeepSeek Harness": (
+            # $DSH_HOME 可重定向数据根；默认 ~/.dsh
+            [Path(os.environ["DSH_HOME"])] if os.environ.get("DSH_HOME") else []
+        ) + [home / ".dsh"],
         "OpenCode": [
             home / ".local" / "share" / "opencode",  # XDG data dir (sessions / opencode.db)
             home / ".opencode",  # binary + config dir
@@ -160,6 +164,8 @@ AI_PROJECT_CONFIG_PATTERNS = {
     ".cursor/",
     ".codex/",
     ".opencode/",
+    ".dsh/",       # DeepSeek Harness 项目级配置
+    ".dsh-home/",  # DeepSeek Harness 项目本地数据根
     ".ocx/",
     ".hermes/",
     ".aider*",
@@ -648,6 +654,7 @@ RUNTIME_TOKENS = {
     "Codex": ["codex"],
     "Windsurf": ["windsurf"],
     "OpenCode": ["opencode"],
+    "DeepSeek Harness": ["dsh"],
     "Gemini CLI": ["gemini"],
     "Qwen Code": ["qwen"],
     "Aider": ["aider"],
