@@ -31,7 +31,7 @@ from typing import Any, Dict, List, Optional
 
 SCHEMA_VERSION = "1.0"
 SKILL_NAME = "agent-usage-report"
-SKILL_VERSION_FALLBACK = "0.2.11"  # 仅在 SKILL.md 读取失败时兜底
+SKILL_VERSION_FALLBACK = "0.2.12"  # 仅在 SKILL.md 读取失败时兜底
 
 
 def skill_version() -> str:

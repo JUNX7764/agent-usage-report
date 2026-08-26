@@ -13,7 +13,7 @@ Refer to `references/agent-discovery.md` for the full agent detection matrix.
 6. Verify referenced outputs in authorized project roots. If absent: record it as "agent session only, artifact not located" and do not exaggerate.
 7. Conversation text is not independent outcome/use/impact evidence.
 8. For unsupported formats, ask the user for an export. Do not reverse-engineer private databases.
-9. Export raw session data (JSONL/JSON/CSV, per platform native format) into 论证材料/ as B 级 system evidence; AI-parsed summaries (_解析.md) are supplementary, not replacement.
+9. Export raw session data (JSONL/JSON/CSV, per platform native format) into the output folder as original system evidence; AI-parsed summaries are supplementary, not replacement.
 
 ## Proma sessions
 
