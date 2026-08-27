@@ -2,7 +2,7 @@
 """Scan for installed AI agents on macOS, Linux, or Windows.
 
 Auto-detects the platform and checks the correct paths for each known AI agent.
-Outputs a JSON summary of found agents with their paths, sizes, and file counts.
+Outputs a JSON summary of found agents with their paths and file counts.
 
 Also provides project attribution classification for Git repositories to help
 distinguish user-created projects from downloaded open-source projects.
@@ -262,15 +262,16 @@ MAX_FILES_TO_COUNT = 5_000  # safety guard + I/O bound
 
 
 def _count_files(path: Path) -> tuple[int, int]:
-    """Return (file_count, total_size_bytes) for a directory, or (1, size) for a file."""
+    """Return (file_count, 0) for a directory, or (1, 0) for a file.
+
+    0.2.15：不再逐文件 stat 累计 size（实测占扫描 I/O 的大头，且无下游消费者：
+    评语只用 file_count，报告流程不读 size_bytes）。保留字段恒为 0 以兼容
+    旧消费者。计数上限仍由 MAX_FILES_TO_COUNT 控制。
+    """
     if path.is_file():
-        try:
-            return 1, path.stat().st_size
-        except OSError:
-            return 1, 0
+        return 1, 0
 
     count = 0
-    total = 0
     try:
         for current, dirnames, filenames in os.walk(path, topdown=True, followlinks=False):
             # prune excluded and symlink dirs
@@ -278,20 +279,16 @@ def _count_files(path: Path) -> tuple[int, int]:
                 d for d in dirnames
                 if d not in EXCLUDE_DIRS and not (Path(current) / d).is_symlink()
             ]
+            # 只数文件名，不 stat：纯遍历计数（os.walk 内部用 scandir 缓存的类型信息）
             for name in filenames:
-                fp = Path(current) / name
-                if fp.is_symlink():
+                if (Path(current) / name).is_symlink():
                     continue
-                try:
-                    total += fp.stat().st_size
-                except OSError:
-                    pass
                 count += 1
                 if count >= MAX_FILES_TO_COUNT:
-                    return count, total
+                    return count, 0
     except OSError:
         pass
-    return count, total
+    return count, 0
 
 
 def _glob_dirs(parent: Path, prefix: str) -> list[Path]:
@@ -995,7 +992,7 @@ def scan() -> dict:
         "runtime_signals": runtime,
         "runtime_detected_but_no_data_dir": runtime_missing,
         "unknown_data_dir_candidates": unknown_candidates,
-        "note": "File counts and sizes are approximate; entries are aggregated by agent name (multiple candidate paths merged into 'paths'). category != 'agent' means local-model/completion/note/launcher tool, not a conversational agent. 'runtime_detected_but_no_data_dir' lists agents seen on PATH / in processes / in env vars whose data dir was not found - always confirm those with the user. 'unknown_data_dir_candidates' enumerates ALL data-looking dirs minus catalog and known system noise, ranked by recent activity (newest_activity) - ask the user to claim any real agent tools. Content is not read in this phase.",
+        "note": "File counts are approximate; entries are aggregated by agent name (multiple candidate paths merged into 'paths'). size_bytes is kept for compatibility but always 0 (not tracked since 0.2.15). category != 'agent' means local-model/completion/note/launcher tool, not a conversational agent. 'runtime_detected_but_no_data_dir' lists agents seen on PATH / in processes / in env vars whose data dir was not found - always confirm those with the user. 'unknown_data_dir_candidates' enumerates ALL data-looking dirs minus catalog and known system noise, ranked by recent activity (newest_activity) - ask the user to claim any real agent tools. Content is not read in this phase.",
     }
 
 

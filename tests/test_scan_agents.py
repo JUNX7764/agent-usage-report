@@ -298,6 +298,23 @@ class ScanAgentsTests(unittest.TestCase):
         # 采样上限 1000，20 个文件应全部数到
         self.assertEqual(entry["file_count"], 20)
 
+    def test_size_bytes_field_present_but_untracked(self):
+        # 0.2.15：size 不再逐文件 stat（性能），字段保留恒 0 兼容旧消费者；
+        # file_count 仍准确计数
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            claude = home / ".claude"
+            claude.mkdir()
+            (claude / "sessions").mkdir()
+            (claude / "sessions" / "a.jsonl").write_text("x" * 1000)
+            (claude / "sessions" / "b.jsonl").write_text("x" * 2000)
+            result = self._scan_with_home(home)
+
+        entry = next(a for a in result["agents_found"] if a["name"] == "Claude Code")
+        self.assertIn("size_bytes", entry)          # 字段仍在（兼容）
+        self.assertEqual(entry["size_bytes"], 0)     # 恒为 0（不再跟踪）
+        self.assertEqual(entry["file_count"], 2)     # 计数照旧准确
+
 
 if __name__ == "__main__":
     unittest.main()
