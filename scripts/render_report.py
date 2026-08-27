@@ -323,7 +323,7 @@ def render(data: Dict[str, Any]) -> str:
         "projects": stats.get("projects_count", 0),
         "top": str(stats.get("top_agent") or ""),
         "text": str(data.get("share_text") or ""),
-    }, ensure_ascii=False).replace("</", "<\\/").replace(" ", "\\u2028").replace(" ", "\\u2029")  # never break out of <script>
+    }, ensure_ascii=False).replace("</", "<\\/").replace(chr(0x2028), "\\u2028").replace(chr(0x2029), "\\u2029")  # never break out of <script>
     parts.append(
         '<button class="share-btn" id="shareBtn" type="button">SHARE ↗</button>'
         '<div class="share-pop" id="sharePop">'
