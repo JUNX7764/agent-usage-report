@@ -17,7 +17,7 @@
 
 ## 30 秒上手
 
-**这不是需要部署的软件，是给你正在用的 AI Agent 装的一个技能。**不用跑测试、不用配环境，三选一：
+**这不是需要部署的软件，是给你正在用的 AI Agent 装的一个技能**。不用跑测试、不用配环境，三选一：
 
 1. **最省事**：把本仓库链接直接发给你的 Agent（Claude Code / Proma / Hermes / Codex 等）：
    > 装一下这个 skill：https://github.com/JUNX7764/agent-usage-report ，装好了帮我生成报告
