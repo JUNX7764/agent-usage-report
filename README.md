@@ -1,7 +1,7 @@
 # Agent Usage Report ——「我用 Agent 干了啥」
 
 <p>
-  <img alt="version" src="https://img.shields.io/badge/version-0.2.10-blue">
+  <img alt="version" src="https://img.shields.io/badge/version-0.2.16-blue">
   <img alt="python" src="https://img.shields.io/badge/python-3.8%2B-green">
   <img alt="platform" src="https://img.shields.io/badge/macOS%20%7C%20Linux%20%7C%20Windows-supported-lightgrey">
   <img alt="deps" src="https://img.shields.io/badge/dependencies-0-orange">
@@ -14,6 +14,10 @@
 ![报告长这样](docs/report-demo.png)
 
 > 上图是示例数据生成的演示报告。你自己的报告由你的真实记录生成。
+
+## 最近更新
+
+- **v0.2.16**（2026-08-27）：针对 Skill 分发平台扫描器做兼容性整理——测试文件全量 ASCII 化、`render_report` 改用 `chr()` 处理 Unicode 行/段分隔符、变量命名调整、补 `license: MIT`；53 项测试与分发审计全绿。
 
 ## 30 秒上手
 
@@ -73,7 +77,7 @@ Agent 只会问你两件事——统计哪个时间段、报告署什么名—�
 纯 Python 标准库，零第三方依赖（Python 3.8+）。
 
 ```bash
-# 运行测试（41 项）
+# 运行测试（53 项）
 python3 -m unittest discover -s tests -p 'test_*.py'
 # 语法检查
 python3 -m py_compile scripts/*.py
