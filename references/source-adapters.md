@@ -14,6 +14,11 @@ Refer to `references/agent-discovery.md` for the full agent detection matrix.
 7. Conversation text is not independent outcome/use/impact evidence.
 8. For unsupported formats, ask the user for an export. Do not reverse-engineer private databases.
 9. Export raw session data (JSONL/JSON/CSV, per platform native format) into the output folder as original system evidence; AI-parsed summaries are supplementary, not replacement.
+10. **Session count = conversation count, not database row count**. Merge adjacent sessions into conversations using:
+    - **Time window**: sessions within 5 minutes + same project → same conversation
+    - **Title similarity**: identical or highly similar titles → same conversation
+    - Example: OpenCode may create multiple `session` rows for one dialogue; count as 1 conversation.
+    - Tools with native conversation-level records (Proma, Claude Code JSONL files, Hermes) already match this definition.
 
 ## Proma sessions
 
@@ -141,8 +146,35 @@ PYEOF
 
 ```bash
 # 会话数按项目分组（项目归因）
-sqlite3 -readonly ~/.local/share/opencode/opencode.db \
-  "SELECT directory, COUNT(*) FROM session GROUP BY directory ORDER BY COUNT(*) DESC;"
+# 注意：需要按时间窗口合并相邻 session，不能直接 COUNT(*)
+sqlite3 -readonly ~/.local/share/opencode/opencode.db <<'SQL'
+WITH ordered_sessions AS (
+  SELECT 
+    directory,
+    time_created,
+    title,
+    LAG(time_created) OVER (PARTITION BY directory ORDER BY time_created) as prev_time,
+    LAG(title) OVER (PARTITION BY directory ORDER BY time_created) as prev_title
+  FROM session
+  WHERE time_created IS NOT NULL
+),
+conversation_starts AS (
+  SELECT 
+    directory,
+    time_created,
+    CASE 
+      WHEN prev_time IS NULL THEN 1
+      WHEN (time_created - prev_time) > 300000 THEN 1  -- 5分钟 = 300000ms
+      WHEN title != prev_title THEN 1
+      ELSE 0
+    END as is_new_conversation
+  FROM ordered_sessions
+)
+SELECT directory, SUM(is_new_conversation) as conversation_count
+FROM conversation_starts
+GROUP BY directory
+ORDER BY conversation_count DESC;
+SQL
 
 # 全部会话时间戳（隐藏战绩/时间线用）；time_created 是 epoch 毫秒
 sqlite3 -readonly ~/.local/share/opencode/opencode.db \
