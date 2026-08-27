@@ -62,9 +62,11 @@ def _agent_paths() -> dict[str, list[Path]]:
         "Proma": [home / ".proma"],
         "Claude Code": [home / ".claude"],
         "Claude Desktop": [appdata / "Claude"],
-        "Hermes": [home / ".hermes"],
+        "Claude 3P": [appdata / "Claude-3p"],
+        "ChatGPT Desktop": [appdata / "com.openai.chat", local / "OpenAI"],
+        "Hermes": [home / ".hermes", home / ".hermes-web-ui"],
         "Cursor": [home / ".cursor", appdata / "Cursor"],
-        "Codex": [home / "Documents" / "Codex", home / ".codex"],
+        "Codex": [home / "Documents" / "Codex", home / ".codex", appdata / "Codex"],
         "Windsurf": [home / ".windsurf", appdata / "Windsurf", home / ".codeium" / "windsurf"],
         "Aider": [home / ".aider", home / ".aider.chat.history.md"],
         "Cline": [
@@ -83,13 +85,13 @@ def _agent_paths() -> dict[str, list[Path]]:
         "LM Studio": [appdata / "LM Studio", home / ".lmstudio"],
         # 国内 AI Agent
         "WorkBuddy": [appdata / "WorkBuddy", local / "WorkBuddy", home / ".workbuddy"],
-        "TRAE": [appdata / "TRAE"],
-        "Qoder": [appdata / "Qoder", local / "Qoder"],
+        "TRAE": [appdata / "TRAE", home / ".trae-cn", home / ".trae", home / ".trae-aicc"],
+        "Qoder": [appdata / "Qoder", local / "Qoder", home / ".qoder", home / ".qoderwork"],
         "悟空": [
             appdata / "Wukong",
             appdata / "DingTalk" / "Wukong",
         ],
-        "千问办公": [appdata / "QianwenOffice"],
+        "千问办公": [appdata / "QianwenOffice", appdata / "QwenWorkCN", home / ".qwenworkcn"],
         "DscAiWork": [appdata / "DscAiWork", home / "DscAiWork"],
         # Code completion tools
         "Tabnine": [appdata / "TabNine"],
@@ -100,38 +102,43 @@ def _agent_paths() -> dict[str, list[Path]]:
         ],
         "Amazon Q Developer": [home / ".aws" / "amazonq", appdata / "amazon-q"],
         # 国内编程 Agent (新增 4 个)
+        "Kimi CLI": [home / ".kimi"],
         "Kimi Code": [appdata / "Kimi Code", home / ".kimi-code"],
-        "Kimi Work": [appdata / "Kimi Work"],
+        "Kimi Work": [appdata / "Kimi Work", home / ".kimi-work"],
         "CodeBuddy": [appdata / "CodeBuddy"],
-        "OMP": [appdata / "OMP"],
+        "OMP": [appdata / "OMP", home / ".omp"],
         # 国外编程 Agent (新增 16 个)
         "Gemini CLI": [home / ".gemini"],
         "Qwen Code": [home / ".qwen"],
-        "Antigravity CLI": [home / ".antigravity", home / ".agy"],
+        "Antigravity CLI": [home / ".antigravity", home / ".agy", home / ".antigravity-ide", appdata / "Antigravity", appdata / "Antigravity IDE"],
         "DeepSeek Harness": (
             # $DSH_HOME 可重定向数据根；默认 ~/.dsh
             [Path(os.environ["DSH_HOME"])] if os.environ.get("DSH_HOME") else []
         ) + [home / ".dsh"],
         "OpenCode": [
             home / ".local" / "share" / "opencode",  # XDG data dir (sessions / opencode.db)
+            home / ".config" / "opencode",  # XDG config dir 变体
             home / ".opencode",  # binary + config dir
             appdata / "OpenCode",
+            appdata / "opencode",
             local / "opencode",
+            appdata / "ai.opencode.desktop",  # 桌面版（Electron）
+            appdata / "@opencode-ai",
         ],
         "Alma": [appdata / "Alma"],
-        "Pi": [appdata / "Pi"],
+        "Pi": [appdata / "Pi", home / ".pi"],
         "Grok Build": [appdata / "Grok Build"],
         "Copilot CLI": [home / ".copilot", home / ".github" / "copilot"],
         "Zed": [appdata / "Zed", home / ".config" / "zed"],
-        "Warp": [appdata / "dev.warp.Warp-Stable"],
+        "Warp": [appdata / "dev.warp.Warp-Stable", home / ".warp"],
         "Augment": [home / ".augment"],
-        "OpenClaw": [appdata / "OpenClaw"],
+        "OpenClaw": [appdata / "OpenClaw", home / ".openclaw", home / ".kimi_openclaw"],
         "Bub": [appdata / "Bub"],
         "Cradle": [appdata / "Cradle"],
         "MiMo Code": [appdata / "MiMo Code", home / ".local" / "share" / "mimocode"],
         "Craft Agent": [appdata / "Craft Agent"],
         "Droid": [appdata / "Droid"],
-        "ZCode": [appdata / "ZCode"],
+        "ZCode": [appdata / "ZCode", home / ".zcode"],
         "Arkloop": [appdata / "Arkloop"],
         "OpticLM": [appdata / "OpticLM"],
         # 多智能体工具 (新增 5 个)
@@ -146,8 +153,16 @@ def _agent_paths() -> dict[str, list[Path]]:
         "Apple Notes": [home / "Library" / "Group Containers" / "group.com.apple.notes"] if sys.platform == "darwin" else [],
         "TiddlyWiki": [home / ".tiddlywiki"],
         # 其他工具 (新增 2 个)
-        "Raycast": [appdata / "Raycast"] if sys.platform == "darwin" else [],
-        "Cherry Studio": [appdata / "Cherry Studio"],
+        "Raycast": [appdata / "Raycast", appdata / "com.raycast.macos"] if sys.platform == "darwin" else [],
+        "Cherry Studio": [appdata / "Cherry Studio", home / ".cherrystudio"],
+        # 召回补丁新增（2026-08-26 实测发现的真实数据目录）
+        "Kiro": [home / ".kiro", appdata / "Kiro"],
+        "MiniMax Agent": [home / ".minimax-agent", home / ".minimax-agent-cn"],
+        "Reasonix": [home / ".reasonix", appdata / "reasonix"],
+        "Hanako": [home / ".hanako"],
+        "Cola": [home / ".cola", appdata / "Cola"],
+        "ChatGLM": [appdata / "chatglm"],
+        "Nowledge Mem": [appdata / "co.nowledge.mem.desktop", home / ".nowledge-mem"],
     }
 
 
@@ -738,65 +753,167 @@ def _detect_runtime_signals() -> dict:
 # Heuristic discovery of unknown agent data directories
 # ---------------------------------------------------------------------------
 
+# 召回优先：目录名/文件名标记。命中任意一个即进入候选，宁多列不静默漏。
 SESSION_DIR_MARKERS = {
-    "session", "sessions", "history", "conversations", "chats", "storage",
+    "session", "sessions", "history", "conversations", "chats",
+    "projects", "agent", "agents", "threads", "workstreams",
 }
 SESSION_FILE_SUFFIXES = {".jsonl", ".db", ".sqlite", ".sqlite3"}
+# db/sqlite 文件还需名字里带会话关键词，避免把任意应用的数据库都算进来
+SESSION_FILE_KEYWORDS = ("session", "chat", "conversation", "history")
 MAX_UNKNOWN_CANDIDATES = 30
 
+# 全扫时的噪音清单：系统/包管理器/编辑器缓存，与 Agent 会话无关。
+# 前缀匹配 macOS 系统 appdata（com.apple.* 等）与常见厂商域名前缀。
+SWEEP_NOISE_PREFIXES = (
+    "com.apple.", "group.com.apple.", "com.microsoft.",
+    "org.mozilla.", "com.google.", "apple.", "com.bugsnag.",
+)
+SWEEP_NOISE_DIRS = {
+    # home 下的系统/工具缓存
+    ".Trash", ".cache", ".npm", ".npm-global", ".bun", ".homebrew", ".docker",
+    ".android", ".m2", ".gradle", ".cargo", ".rustup", ".nvm", ".pyenv",
+    ".conda", ".vscode", ".vscode-oss", ".electron-gyp", ".cups", ".oh-my-zsh", ".ssh",
+    # 实测会误报的非 AI 应用（appdata）
+    "Dock", "AddressBook", "Quark", "LarkShell", "Apple Qmaster",
+    "com.charliemonroe.Downie-4", "O+Connect", "NowledgeGraph",
+}
 
-def _looks_like_agent_data(path: Path) -> list[str]:
+# Chromium/Electron 浏览器档案指纹：同目录出现 ≥2 个即认定是浏览器 profile，
+# 其中的 Sessions/History 属于浏览器内部结构，不算 Agent 会话标记。
+CHROMIUM_FINGERPRINT_FILES = {
+    "cookies", "preferences", "login data", "bookmarks", "web data",
+    "top sites", "visited links", "favicons",
+}
+
+
+def _looks_like_agent_data(path: Path, max_depth: int = 2) -> list[str]:
     """Return marker descriptions if a directory smells like agent session data.
 
     Metadata only: names and types, never content.
+    下探 max_depth 层：sessions/projects 等标记埋在第二层也能发现。
+    Chromium/Electron 档案里的 Sessions/History 不算标记（浏览器内部结构）。
     """
     markers: list[str] = []
-    try:
-        with os.scandir(path) as it:
-            entries = list(it)[:200]
-    except OSError:
-        return markers
-    for e in entries:
-        name = e.name.lower()
-        if e.is_dir(follow_symlinks=False) and name in SESSION_DIR_MARKERS:
-            markers.append(f"dir:{e.name}")
-        elif e.is_file(follow_symlinks=False) and (
-            Path(name).suffix in SESSION_FILE_SUFFIXES or name.startswith("history")
-        ):
-            markers.append(f"file:{e.name}")
-        if len(markers) >= 3:
-            break
+    stack: list[tuple[Path, int]] = [(path, 0)]
+    visited = 0
+    while stack and visited < 400:
+        current, depth = stack.pop()
+        visited += 1
+        try:
+            with os.scandir(current) as it:
+                entries = list(it)[:200]
+        except OSError:
+            continue
+        chromium_hits = sum(
+            1 for e in entries
+            if e.is_file(follow_symlinks=False) and e.name.lower() in CHROMIUM_FINGERPRINT_FILES
+        )
+        is_chromium = chromium_hits >= 2
+        for e in entries:
+            name = e.name.lower()
+            if e.is_dir(follow_symlinks=False):
+                if name in SESSION_DIR_MARKERS:
+                    if is_chromium and name == "sessions":
+                        continue  # Chromium 会话恢复目录，不算 Agent 会话
+                    markers.append(f"dir:{e.name}")
+                elif (
+                    depth < max_depth
+                    and name not in {"node_modules", "__pycache__", "cache", "logs", ".git"}
+                    and not name.startswith(".")
+                ):
+                    stack.append((Path(e.path), depth + 1))
+            elif e.is_file(follow_symlinks=False):
+                if is_chromium and name.startswith("history"):
+                    continue  # 浏览器 History / History-journal
+                suffix = Path(name).suffix
+                history_like = name.startswith("history") and suffix in {
+                    "", ".db", ".json", ".jsonl", ".sqlite", ".sqlite3", ".txt",
+                }
+                keyword_db = (
+                    suffix in {".db", ".sqlite", ".sqlite3"}
+                    and any(k in name for k in SESSION_FILE_KEYWORDS)
+                )
+                jsonl = suffix == ".jsonl" and "updater" not in name
+                if history_like or keyword_db or jsonl:
+                    markers.append(f"file:{e.name}")
+            if len(markers) >= 4:
+                return markers
     return markers
 
 
+def _dir_activity(path: Path) -> tuple[int, float]:
+    """Bounded (file_count, newest_mtime) estimate for ranking candidates."""
+    count = 0
+    newest = 0.0
+    try:
+        for current, dirnames, filenames in os.walk(path, topdown=True, followlinks=False):
+            dirnames[:] = [
+                d for d in dirnames
+                if d not in EXCLUDE_DIRS and not (Path(current) / d).is_symlink()
+            ]
+            for name in filenames:
+                count += 1
+                if count >= 4000:
+                    return count, newest
+                try:
+                    m = (Path(current) / name).stat().st_mtime
+                    if m > newest:
+                        newest = m
+                except OSError:
+                    pass
+    except OSError:
+        pass
+    return count, newest
+
+
 def _discover_unknown_candidates(known_paths: set[str]) -> list[dict]:
-    """Scan common config roots for agent-looking dirs missing from the catalog."""
+    """Enumerate ALL plausible data roots, subtract catalog + known noise.
+
+    召回优先策略（2026-08-26）：不再猜"哪个未知目录像 Agent"（会静默漏），
+    而是全部枚举后减去已知目录与系统噪音，剩下的按最近活动时间排序，
+    交给用户认领。宁可多列几个误报，也不静默漏掉未登记的新工具。
+    """
     home = _home()
-    roots = [home, home / ".config", home / ".local" / "share", _appdata()]
+    roots = [home, home / ".config", home / ".local" / "share", _appdata(), _local_appdata()]
+    root_set = {str(r) for r in roots}
+    root_set.update({str(home / ".config"), str(home / ".local")})  # 根的父目录也不当候选
     candidates: list[dict] = []
     seen: set[str] = set()
     for root in roots:
         try:
             with os.scandir(root) as it:
-                entries = list(it)[:500]
+                entries = list(it)[:800]
         except OSError:
             continue
         for e in entries:
-            if len(candidates) >= MAX_UNKNOWN_CANDIDATES:
-                return candidates
             if not e.is_dir(follow_symlinks=False):
                 continue
-            # at home level only dotdirs are plausible agent data locations
+            # home 下只有点目录可能是 Agent 数据；扫描根本身不当候选
             if root == home and not e.name.startswith("."):
                 continue
+            if e.name in SWEEP_NOISE_DIRS or e.name.startswith(SWEEP_NOISE_PREFIXES):
+                continue
             spath = str(Path(e.path))
-            if spath in known_paths or spath in seen:
+            if spath in root_set or spath in known_paths or spath in seen:
                 continue
             markers = _looks_like_agent_data(Path(e.path))
-            if len(markers) >= 2:
-                seen.add(spath)
-                candidates.append({"path": spath, "markers": markers})
-    return candidates
+            if not markers:
+                continue
+            seen.add(spath)
+            file_count, newest = _dir_activity(Path(e.path))
+            candidates.append({
+                "path": spath,
+                "markers": markers,
+                "file_count": file_count,
+                "newest_activity": datetime.fromtimestamp(newest).strftime("%Y-%m-%d") if newest else None,
+                "_newest": newest,
+            })
+    # 按最近活动排序：最活跃的排最前；截断时丢的是最不活跃的
+    candidates.sort(key=lambda c: -(c["_newest"] or 0))
+    for c in candidates:
+        c.pop("_newest", None)
+    return candidates[:MAX_UNKNOWN_CANDIDATES]
 
 
 def scan() -> dict:
@@ -871,7 +988,7 @@ def scan() -> dict:
         "runtime_signals": runtime,
         "runtime_detected_but_no_data_dir": runtime_missing,
         "unknown_data_dir_candidates": unknown_candidates,
-        "note": "File counts and sizes are approximate; entries are aggregated by agent name (multiple candidate paths merged into 'paths'). category != 'agent' means local-model/completion/note/launcher tool, not a conversational agent. 'runtime_detected_but_no_data_dir' lists agents seen on PATH / in processes / in env vars whose data dir was not found — always confirm those with the user. 'unknown_data_dir_candidates' are heuristic guesses for the user to claim. Content is not read in this phase.",
+        "note": "File counts and sizes are approximate; entries are aggregated by agent name (multiple candidate paths merged into 'paths'). category != 'agent' means local-model/completion/note/launcher tool, not a conversational agent. 'runtime_detected_but_no_data_dir' lists agents seen on PATH / in processes / in env vars whose data dir was not found - always confirm those with the user. 'unknown_data_dir_candidates' enumerates ALL data-looking dirs minus catalog and known system noise, ranked by recent activity (newest_activity) - ask the user to claim any real agent tools. Content is not read in this phase.",
     }
 
 
@@ -911,8 +1028,11 @@ def main() -> int:
             )
         unknown = result.get("unknown_data_dir_candidates") or []
         if unknown:
-            preview = "; ".join(c["path"] for c in unknown[:5])
-            more = f" 等 {len(unknown)} 个" if len(unknown) > 5 else ""
+            preview = "; ".join(
+                f"{c['path']}（最近活动 {c.get('newest_activity') or '未知'}）"
+                for c in unknown[:5]
+            )
+            more = f" 等 {len(unknown)} 个（按最近活动排序）" if len(unknown) > 5 else ""
             print(f"发现疑似 Agent 数据目录（不在已知清单，请让用户认领）：{preview}{more}")
         if result["agents_not_found"]:
             print(f"没找到: {', '.join(result['agents_not_found'])}")

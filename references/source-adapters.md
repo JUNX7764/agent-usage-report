@@ -69,14 +69,23 @@ EOF
 3. Check `checkpoints/` for session checkpoints.
 4. Check `sessions/` if it exists.
 
-**Tested snippets**（对着真实 107 个会话验证过）: 会话在 `~/.hermes/sessions/YYYYMMDD_HHMMSS_<id>.jsonl`，**文件名前缀就是会话开始时间**（本地时间），数会话、取时间戳用文件名即可，不用打开文件：
+**Tested snippets**（2026-08-27 对真实库验证过）: **会话正本在 `~/.hermes/state.db` 的 `sessions` 表**（SQLite 只读；`sessions/` 目录只是 legacy mirror，不要当正本）。`started_at` 是 epoch 秒，转用户本地时区即会话开始时间；`source` 区分 tui/desktop/telegram/cron/feishu 入口；`title`、`cwd`、`message_count` 可用于叙事与项目关联。只 SELECT 元数据列，不读消息正文：
 
 ```bash
-ls ~/.hermes/sessions/*.jsonl | wc -l          # 会话总数
-ls ~/.hermes/sessions/ | sed -n 's/^\([0-9]\{8\}\)_\([0-9]\{6\}\)_.*/\1 \2/p'  # 每个会话的 YYYYMMDD HHMMSS
+python3 - <<'PYEOF'
+import sqlite3, os
+from datetime import datetime, date, timezone, timedelta
+db = os.path.expanduser('~/.hermes/state.db')
+con = sqlite3.connect('file:%s?mode=ro' % db, uri=True)
+tz = timezone(timedelta(hours=8))            # 用户本地时区
+start, end = date(2026, 1, 1), date(2026, 8, 26)   # 换成实际复盘期间
+rows = con.execute('select started_at, source, message_count from sessions').fetchall()
+in_period = [r for r in rows if r[0] and start <= datetime.fromtimestamp(r[0], tz).date() <= end]
+print('sessions in period:', len(in_period))
+PYEOF
 ```
 
-归档会话在 `~/.hermes/sessions/legacy-*/` 子目录和 `store/` 里，统计时别漏。
+**迁移前历史（约 2026-05-21 之前）**: 会话是 `~/.hermes/sessions/YYYYMMDD_HHMMSS_<id>.jsonl`，**文件名前缀就是会话开始时间**（本地时间），数会话用文件名即可，不用打开文件；归档在 `legacy-*/` 子目录和 `store/`。两段相加才是完整会话数（实测一例：legacy 107 + state.db 592 = 699，只数 legacy 会把主力工具写成“六周就停更”）。`sessions/sessions.json` 是路由索引旧镜像，不要当会话清单数。
 5. `pairing/` shows messaging integrations (DingTalk, Feishu, WeChat) - record integration type, not credentials.
 6. `skills/` shows installed skills - useful for understanding capabilities used.
 7. If SQLite schema is unclear or encrypted, ask the user to export via Hermes Desktop UI.

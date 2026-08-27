@@ -174,6 +174,95 @@ class ScanAgentsTests(unittest.TestCase):
         found_names = [a["name"] for a in result["agents_found"]]
         self.assertIn("Claude Code", found_names)
 
+    def test_single_session_marker_is_enough_for_unknown_candidate(self):
+        # 召回优先：只有 1 个标记（旧版要求 ≥2 会漏掉 .kimi 这类目录）
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            mystery = home / ".weakagent"
+            (mystery / "sessions").mkdir(parents=True)
+            result = self._scan_with_home(home)
+
+        paths = [c["path"] for c in result["unknown_data_dir_candidates"]]
+        self.assertIn(str(mystery), paths)
+
+    def test_nested_session_marker_discovered_two_levels_deep(self):
+        # 探针下探两层：sessions 埋在子目录里也能发现
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            mystery = home / ".deepagent"
+            (mystery / "data" / "sessions").mkdir(parents=True)
+            (mystery / "data" / "sessions" / "a.jsonl").write_text("{}")
+            result = self._scan_with_home(home)
+
+        paths = [c["path"] for c in result["unknown_data_dir_candidates"]]
+        self.assertIn(str(mystery), paths)
+
+    def test_chromium_profile_dirs_not_flagged(self):
+        # Chromium/Electron 档案（Sessions+History+Cookies）不算 Agent 数据
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            appdata = home / "Library" / "Application Support"
+            profile = appdata / "SomeBrowser"
+            profile.mkdir(parents=True)
+            (profile / "Sessions").mkdir()
+            (profile / "Cookies").write_text("x")
+            (profile / "Preferences").write_text("x")
+            (profile / "History").write_text("x")
+            (profile / "History-journal").write_text("x")
+            (profile / "updater_history.jsonl").write_text("x")
+            result = self._scan_with_home(home)
+
+        paths = [c["path"] for c in result["unknown_data_dir_candidates"]]
+        self.assertNotIn(str(profile), paths)
+
+    def test_db_without_session_keyword_is_not_a_marker(self):
+        # 任意应用的数据库（如 utmc_store.sqlite）不该被当成会话痕迹
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            appdata = home / "Library" / "Application Support"
+            app = appdata / "SomeApp"
+            app.mkdir(parents=True)
+            (app / "utmc_store.sqlite").write_text("x")
+            (app / "state.db").write_text("x")
+            result = self._scan_with_home(home)
+
+        paths = [c["path"] for c in result["unknown_data_dir_candidates"]]
+        self.assertNotIn(str(app), paths)
+
+    def test_system_noise_prefixes_and_dirs_skipped(self):
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            appdata = home / "Library" / "Application Support"
+            for name in ("com.apple.akd", "Dock", "Quark"):
+                d = appdata / name
+                (d / "sessions").mkdir(parents=True)
+            cache = home / ".cache"
+            (cache / "sessions").mkdir(parents=True)
+            result = self._scan_with_home(home)
+
+        paths = [c["path"] for c in result["unknown_data_dir_candidates"]]
+        for name in ("com.apple.akd", "Dock", "Quark"):
+            self.assertNotIn(str(appdata / name), paths)
+        self.assertNotIn(str(cache), paths)
+
+    def test_unknown_candidates_carry_activity_for_ranking(self):
+        # 认领清单带 file_count / newest_activity，便于按活跃度排序认领
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            mystery = home / ".activeagent"
+            s = mystery / "sessions"
+            s.mkdir(parents=True)
+            (s / "a.jsonl").write_text("{}")
+            result = self._scan_with_home(home)
+
+        entry = next(
+            c for c in result["unknown_data_dir_candidates"]
+            if c["path"] == str(mystery)
+        )
+        self.assertIn("file_count", entry)
+        self.assertIn("newest_activity", entry)
+        self.assertGreaterEqual(entry["file_count"], 1)
+
 
 if __name__ == "__main__":
     unittest.main()
