@@ -263,6 +263,41 @@ class ScanAgentsTests(unittest.TestCase):
         self.assertIn("newest_activity", entry)
         self.assertGreaterEqual(entry["file_count"], 1)
 
+    def test_file_count_stops_at_cap_and_notes_it(self):
+        # 大目录计数到上限即停并标记 capped：文件数只用于评语，
+        # 上限（5000）控制 I/O，防止大目录把扫描拖成分钟级
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            big = home / ".claude"  # 目录表内路径，才会走 _count_files
+            big.mkdir()
+            for i in range(12):
+                (big / f"f{i}.jsonl").write_text("{}")
+            with mock.patch.object(scan_mod, "MAX_FILES_TO_COUNT", 5):
+                result = self._scan_with_home(home)
+
+        entry = next(a for a in result["agents_found"] if a["name"] == "Claude Code")
+        self.assertEqual(entry["file_count"], 5)
+        self.assertIn("file_count_capped", entry.get("notes", []))
+
+    def test_dir_activity_sampling_is_bounded(self):
+        # 活跃度探针只采样有限文件（排序用，天级精度足够）
+        with TemporaryDirectory() as td:
+            home = Path(td)
+            mystery = home / ".samplingagent"
+            s = mystery / "sessions"
+            s.mkdir(parents=True)
+            for i in range(20):
+                (s / f"s{i}.jsonl").write_text("{}")
+            with mock.patch.object(scan_mod, "MAX_FILES_TO_COUNT", 50):
+                result = self._scan_with_home(home)
+
+        entry = next(
+            c for c in result["unknown_data_dir_candidates"]
+            if c["path"] == str(mystery)
+        )
+        # 采样上限 1000，20 个文件应全部数到
+        self.assertEqual(entry["file_count"], 20)
+
 
 if __name__ == "__main__":
     unittest.main()

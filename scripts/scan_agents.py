@@ -255,7 +255,10 @@ def scan_web_agents_from_projects(projects: list[str | os.PathLike]) -> dict[str
 # ---------------------------------------------------------------------------
 
 EXCLUDE_DIRS = {".git", "node_modules", ".venv", "__pycache__", "dist", "build"}
-MAX_FILES_TO_COUNT = 50_000  # safety guard
+# 文件数只用于进度评语（阈值 1000/100）和粗略体量信息，精度超过几千毫无价值。
+# 上限从 50000 降到 5000：大目录（如 17 万文件的 OpenClaw）的 I/O 直降一个量级，
+# 冷缓存/慢盘机器上扫描耗时从分钟级回到秒级，召回能力不变。
+MAX_FILES_TO_COUNT = 5_000  # safety guard + I/O bound
 
 
 def _count_files(path: Path) -> tuple[int, int]:
@@ -843,7 +846,11 @@ def _looks_like_agent_data(path: Path, max_depth: int = 2) -> list[str]:
 
 
 def _dir_activity(path: Path) -> tuple[int, float]:
-    """Bounded (file_count, newest_mtime) estimate for ranking candidates."""
+    """Bounded (file_count, newest_mtime) estimate for ranking candidates.
+
+    只服务于认领清单的活跃度排序（天级精度）与粗略文件数，
+    采样 1000 个文件足够，避免在候选目录上做全量 walk。
+    """
     count = 0
     newest = 0.0
     try:
@@ -854,7 +861,7 @@ def _dir_activity(path: Path) -> tuple[int, float]:
             ]
             for name in filenames:
                 count += 1
-                if count >= 4000:
+                if count >= 1000:
                     return count, newest
                 try:
                     m = (Path(current) / name).stat().st_mtime
