@@ -20,7 +20,7 @@
 **这不是需要部署的软件，是给你正在用的 AI Agent 装的一个技能**。不用跑测试、不用配环境，三选一：
 
 1. **最省事**：把本仓库链接直接发给你的 Agent（Claude Code / Proma / Hermes / Codex 等）：
-   > 装一下这个 skill：https://github.com/JUNX7764/agent-usage-report ，装好了帮我生成报告
+   > 装一下这个 skill：https://github.com/JUNX7764/agent-usage-report ，装好后严格按照skill标准，帮我生成报告
 2. **手动装**：clone 到你 Agent 的 skills 目录（如 `~/.claude/skills/`、`~/.hermes/skills/`），然后对它说：
    > 看看我用 Agent 干了啥
 3. **不装也行**：clone 下来，让 Agent「读这个仓库的 SKILL.md，按它帮我生成报告」
