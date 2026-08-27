@@ -1,6 +1,6 @@
 ---
 name: agent-usage-report
-version: 0.2.16
+version: 0.2.17
 license: MIT
 description: 盘点本机 AI Agent 使用记录，生成"我用 Agent 干了啥"趣味战绩报告（单文件 HTML）。用户说"看看我用 Agent 干了啥""做个 AI 使用盘点""Agent 使用回顾""我的 AI 战绩""电脑里有哪些 AI 痕迹""生成我的 Agent 年度报告"时使用。只关注本机 Agent 工具（Proma、Claude Code、Cursor、Codex 等），不关注网页版聊天机器人；只读盘点、不复制证据、不要求补充材料、不做任何评价或评审；输出仅供个人回顾与娱乐分享。
 ---
@@ -135,7 +135,12 @@ python3 scripts/scan_injection.py <root> -o <work>/injection-<id>.json
 
 ### 6. 聚合数据并渲染报告
 
-把盘点结果写成 `report_input.json`（schema 见 `references/output-contract.md`）。活跃项目尽量补 1–3 条有真实证据的 `milestones`——它们会汇成报告的「04 周期时间线」；都不填时时间线会退化为按月会话计数，不至于整块消失，但表现力差很多。
+把盘点结果写成 `report_input.json`（schema 见 `references/output-contract.md`）。**每个活跃项目必须补 1–3 条有真实证据的 `milestones`**（从 git commits / 会话记录里提取日期+事件）——它们会汇成报告的「03 成就墙」项目卡的里程碑芯片和「04 周期时间线」。如果某个项目实在找不到证据（无 Git 也无会话内容可挙），`build_report_data.py` 会自动从全局 `session_timestamps` 推算基础里程碑（项目启动 / 高峰期 / 最后更新），但表现力会明显下降。
+
+**生成前自检清单**：
+- [ ] `projects` 数量 ≥ 已知活跃项目数（没漏项目）
+- [ ] `projects` 中 `milestones` 非空的项目占比 ≥ 80%（没偷工减料）
+- [ ] 每个 `milestone` 都有真实日期和具体事件描述（不是“项目启动”这种空话）
 
 **生成 narrative 和 Agent 评语时**，必须参考 `references/narrative-writing-guide.md`：
 - 先读指南第〇章的内核三句话：把自己当人、把对方当人、把关系当连载——用它统领下面所有规则

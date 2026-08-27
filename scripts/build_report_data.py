@@ -411,6 +411,16 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
         milestones = row.get("milestones") or []
         for m in milestones:
             parse_date(m["date"], f"project {name} 的 milestone.date")
+        
+        # 自动推算 milestones：如果项目没有提供 milestones，从全局 session_timestamps 推算基础里程碑
+        if not milestones:
+            session_count_val = row.get("session_count") or 0
+            active_days_val = row.get("active_days") or 0
+            if session_count_val > 0 and active_days_val > 0:
+                # 暂存为占位符，后面会在 timestamps 解析后从全局时间戳推算
+                # 这里标记需要自动生成，等 timestamps 可用后再填充
+                milestones = [{"_auto": True}]  # placeholder
+        
         session_count = row.get("session_count")
         if session_count is not None and (not isinstance(session_count, int) or session_count < 0):
             raise ValueError(f"project {name} 的 session_count 必须是非负整数")
@@ -450,6 +460,27 @@ def build(data: Dict[str, Any]) -> Dict[str, Any]:
     for agent_data in normalized_agents:
         agent_data["tags"] = generate_agent_tags(agent_data["_raw"], timestamps)
         del agent_data["_raw"]  # Remove temporary raw data
+
+    # 自动推算项目 milestones：如果项目没有提供 milestones，从全局 timestamps 推算基础里程碑
+    for proj in normalized_projects:
+        if proj["milestones"] and proj["milestones"][0].get("_auto"):
+            # 需要自动生成
+            proj["milestones"] = []
+            if timestamps:
+                sorted_ts = sorted(timestamps)
+                # 项目启动：周期内第一个会话
+                first_date = sorted_ts[0].strftime("%Y-%m-%d")
+                proj["milestones"].append({"date": first_date, "text": f"{proj['name']} 项目启动"})
+                
+                # 如果 active_days >= 7，添加中期里程碑（高峰期）
+                if proj.get("active_days", 0) >= 7 and len(sorted_ts) >= 3:
+                    mid_idx = len(sorted_ts) // 2
+                    mid_date = sorted_ts[mid_idx].strftime("%Y-%m-%d")
+                    proj["milestones"].append({"date": mid_date, "text": f"{proj['name']} 持续迭代"})
+                
+                # 最后更新：周期内最后一个会话
+                last_date = sorted_ts[-1].strftime("%Y-%m-%d")
+                proj["milestones"].append({"date": last_date, "text": f"{proj['name']} 最近更新"})
 
     sessions_total = sum(a["session_count"] or 0 for a in normalized_agents)
     top_agent = None
