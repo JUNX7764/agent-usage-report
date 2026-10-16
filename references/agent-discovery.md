@@ -75,7 +75,7 @@
 | **MiMo Code** | `~/Library/Application Support/MiMo Code/` | `%LOCALAPPDATA%\MiMo Code\` | JSONL / SQLite | Check session storage; search for `.mimo/` configs |
 | **Craft Agent** | `~/Library/Application Support/Craft Agent/` | `%LOCALAPPDATA%\Craft Agent\` | JSONL / SQLite | Check session storage; search for `.craft/` configs |
 | **Droid** (Factory Droid) | `~/Library/Application Support/Droid/` | `%LOCALAPPDATA%\Droid\` | JSONL / SQLite | Check session storage; search for `.droid/` configs |
-| **ZCode** (Z.ai) | `~/Library/Application Support/ZCode/` | `%LOCALAPPDATA%\ZCode\` | JSONL / SQLite | Check session storage; search for `.zcode/` configs |
+| **ZCode** (Z.ai) | `~/.zcode/`（真实数据；会话在 `cli/db/db.sqlite` 的 `session` 表，字段 `directory`/`title`/`time_created` epoch 毫秒）+ `~/Library/Application Support/ZCode/`（仅 Electron 空壳，无会话） | `%USERPROFILE%\.zcode\` | SQLite | 只读查询 `~/.zcode/cli/db/db.sqlite`；别在 Application Support 里找会话 |
 | **Arkloop** | `~/Library/Application Support/Arkloop/` | `%LOCALAPPDATA%\Arkloop\` | JSONL / SQLite | Check session storage; search for `.arkloop/` configs |
 | **OpticLM** | `~/Library/Application Support/OpticLM/` | `%LOCALAPPDATA%\OpticLM\` | JSONL / SQLite | Check session storage; search for `.opticlm/` configs |
 | **Cherry Studio** | `~/Library/Application Support/Cherry Studio/` | `%APPDATA%\Cherry Studio\` | JSON / SQLite | Check session storage |
